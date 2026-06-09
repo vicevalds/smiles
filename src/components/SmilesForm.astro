@@ -56,10 +56,11 @@
 			id="render-btn"
 			type="submit"
 			disabled
-			class="hover:bg-white border-2 border-accent bg-accent text-black font-semibold p-1 w-full hover:cursor-pointer"
+			class="hover:bg-white border-2 border-accent bg-accent text-black font-semibold p-1 w-full enabled:hover:cursor-pointer disabled:cursor-not-allowed"
 			>
 			Render
 		</button>
 		<p id="form-error" class="text-red-600 mt-2" role="alert" hidden></p>
+		<p id="form-status" class="text-gray-500 mt-2 tabular-nums" role="status" aria-live="polite" hidden></p>
 	</div>
 </form>

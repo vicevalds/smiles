@@ -16,12 +16,8 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 		<link rel="manifest" href="/site.webmanifest">
-		<link rel="preload" href="/RDKit_minimal.js" as="script" />
-		<link rel="preload" href="/RDKit_minimal.wasm" as="fetch" type="application/wasm" crossorigin />
 		<link rel="preload" href="/Geist%5Bwght%5D.woff2" as="font" type="font/woff2" crossorigin />
-		<link rel="preload" href="/GeistMono-Regular.woff2" as="font" type="font/woff2" crossorigin />
 		<title>*.smi</title>
-		<script is:inline src="/RDKit_minimal.js"></script>
 	</head>
 	<body>
 		<main class="flex py-6 px-4">
@@ -45,10 +41,11 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 				delete: () => void
 			}
 			type RDKitModule = { get_mol: (smiles: string) => RDKitMol | null }
+			type RDKitConfig = { wasmBinary?: ArrayBuffer }
 
 			declare global {
 				interface Window {
-					initRDKitModule: () => Promise<RDKitModule>
+					initRDKitModule: (config?: RDKitConfig) => Promise<RDKitModule>
 				}
 			}
 
@@ -57,6 +54,7 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 			const fileInput = document.querySelector<HTMLInputElement>('#smiles-file')!
 			const renderBtn = document.querySelector<HTMLButtonElement>('#render-btn')!
 			const formError = document.querySelector<HTMLParagraphElement>('#form-error')!
+			const formStatus = document.querySelector<HTMLParagraphElement>('#form-status')!
 			const gallery = document.querySelector<HTMLUListElement>('#gallery')!
 			const columns = document.querySelector<HTMLInputElement>('#columns')!
 			const columnsValue = document.querySelector<HTMLSpanElement>('#columns-value')!
@@ -83,8 +81,73 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 			}
 			columns.addEventListener('input', applyColumns)
 
-			const rdkit = await window.initRDKitModule()
-			renderBtn.disabled = false
+			const formatMB = (bytes: number) => (bytes / 1048576).toFixed(1)
+
+			const fetchWithProgress = async (
+				url: string,
+				onProgress: (received: number, total: number) => void,
+			) => {
+				const res = await fetch(url)
+				if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`)
+				const total = Number(res.headers.get('content-length')) || 0
+				if (!res.body) return res.arrayBuffer()
+
+				const reader = res.body.getReader()
+				const chunks: Uint8Array[] = []
+				let received = 0
+				for (;;) {
+					const { done, value } = await reader.read()
+					if (done) break
+					chunks.push(value)
+					received += value.length
+					onProgress(received, total)
+				}
+
+				const bytes = new Uint8Array(received)
+				let offset = 0
+				for (const chunk of chunks) {
+					bytes.set(chunk, offset)
+					offset += chunk.length
+				}
+				return bytes.buffer
+			}
+
+			const loadScript = (src: string) =>
+				new Promise<void>((resolve, reject) => {
+					const script = document.createElement('script')
+					script.src = src
+					script.onload = () => resolve()
+					script.onerror = () => reject(new Error(`Failed to load ${src}`))
+					document.head.append(script)
+				})
+
+			let rdkitPromise: Promise<RDKitModule> | null = null
+			const loadRDKit = () => {
+				if (!rdkitPromise) {
+					rdkitPromise = (async () => {
+						const [, wasmBinary] = await Promise.all([
+							loadScript('/RDKit_minimal.js'),
+							fetchWithProgress('/RDKit_minimal.wasm', (received, total) => {
+								const totalMB = formatMB(Math.max(total, received))
+								showStatus(`Downloading RDKit ${formatMB(received)}/${totalMB} MB`)
+							}),
+						])
+						const module = await window.initRDKitModule({ wasmBinary })
+						showStatus('Downloading RDKit, done.')
+						renderBtn.disabled = false
+						setTimeout(clearStatus, 1000)
+						return module
+					})()
+					rdkitPromise.catch(() => {
+						rdkitPromise = null
+					})
+				}
+				return rdkitPromise
+			}
+
+			const requestIdle =
+				window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 200))
+			requestIdle(() => loadRDKit())
 
 			const parseEntries = (text: string) =>
 				text
@@ -96,7 +159,7 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 						return { smiles, name: rest.join(' ') }
 					})
 
-			const renderCard = ({ smiles, name }: { smiles: string; name: string }) => {
+			const renderCard = (rdkit: RDKitModule, { smiles, name }: { smiles: string; name: string }) => {
 				const mol = rdkit.get_mol(smiles)
 				const valid = !!mol && mol.is_valid()
 				const label = name || smiles
@@ -129,6 +192,14 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 				formError.textContent = ''
 				formError.hidden = true
 			}
+			const showStatus = (message: string) => {
+				formStatus.textContent = message
+				formStatus.hidden = false
+			}
+			const clearStatus = () => {
+				formStatus.textContent = ''
+				formStatus.hidden = true
+			}
 
 			form.addEventListener('submit', async (event) => {
 				event.preventDefault()
@@ -155,13 +226,22 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 					return
 				}
 
+				let rdkit: RDKitModule
+				try {
+					rdkit = await loadRDKit()
+				} catch {
+					showError('Failed to load the rendering engine. Check your connection and try again.')
+					renderBtn.disabled = false
+					return
+				}
+
 				const BATCH_SIZE = 12
 				const nextFrame = () => new Promise(requestAnimationFrame)
 
 				for (let i = 0; i < entries.length; i += BATCH_SIZE) {
 					const fragment = document.createDocumentFragment()
 					for (const entry of entries.slice(i, i + BATCH_SIZE)) {
-						fragment.append(renderCard(entry))
+						fragment.append(renderCard(rdkit, entry))
 					}
 					gallery.append(fragment)
 					await nextFrame()
