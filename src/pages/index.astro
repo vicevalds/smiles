@@ -132,10 +132,9 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 						const firstDownload = !rdkitDownloaded()
 						const [, wasmBinary] = await Promise.all([
 							loadScript('/RDKit_minimal.js'),
-							fetchWithProgress('/RDKit_minimal.wasm', (received, total) => {
+							fetchWithProgress('/RDKit_minimal.wasm', (received) => {
 								if (!firstDownload) return
-								const totalMB = formatMB(Math.max(total, received))
-								showStatus(`Downloading RDKit ${formatMB(received)}/${totalMB} MB`)
+								showStatus(`Downloading RDKit ${formatMB(received)}/6.6 MB`)
 							}),
 						])
 						const module = await window.initRDKitModule({ wasmBinary })
