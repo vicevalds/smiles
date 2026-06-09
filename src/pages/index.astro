@@ -48,12 +48,17 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 			const textarea = document.querySelector<HTMLTextAreaElement>('#smiles-text')!
 			const fileInput = document.querySelector<HTMLInputElement>('#smiles-file')!
 			const renderBtn = document.querySelector<HTMLButtonElement>('#render-btn')!
+			const formError = document.querySelector<HTMLParagraphElement>('#form-error')!
 			const gallery = document.querySelector<HTMLUListElement>('#gallery')!
 			const columns = document.querySelector<HTMLInputElement>('#columns')!
 			const columnsValue = document.querySelector<HTMLSpanElement>('#columns-value')!
 			const cardTemplate = document.querySelector<HTMLTemplateElement>('#card-template')!
 
-			const columnClasses: Record<string, string> = {
+				const ALLOWED_EXTENSIONS = ['.smi', '.smiles', '.txt']
+				const isAllowedFile = (file: File) =>
+					ALLOWED_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext))
+
+				const columnClasses: Record<string, string> = {
 				'2': 'grid-cols-2',
 				'3': 'grid-cols-3',
 				'4': 'grid-cols-4',
@@ -70,11 +75,9 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 			}
 			columns.addEventListener('input', applyColumns)
 
-			// Inicializa RDKit una sola vez y habilita el botón al estar listo.
 			const rdkit = await window.initRDKitModule()
 			renderBtn.disabled = false
 
-			// Cada entrada: primer token = SMILES, resto = nombre opcional.
 			const parseEntries = (text: string) =>
 				text
 					.split('\n')
@@ -96,11 +99,11 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 					if (valid) {
 						el.innerHTML = mol!.get_svg(300, 300)
 					} else {
-						el.textContent = 'NULL'
+						el.innerHTML =
+							'<span class="text-2xl">;(</span>'
 					}
 				})
 
-				// textContent escapa el contenido automáticamente.
 				card.querySelectorAll<HTMLElement>('[data-name]').forEach((el) => {
 					el.textContent = label
 					el.title = label
@@ -110,13 +113,31 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 				return card
 			}
 
+			const showError = (message: string) => {
+				formError.textContent = message
+				formError.hidden = false
+			}
+			const clearError = () => {
+				formError.textContent = ''
+				formError.hidden = true
+			}
+
 			form.addEventListener('submit', async (event) => {
 				event.preventDefault()
 				renderBtn.disabled = true
+				clearError()
 
 				let text = textarea.value
 				const file = fileInput.files?.[0]
-				if (file) text += '\n' + (await file.text())
+				if (file) {
+					if (!isAllowedFile(file)) {
+						showError(`Allowed files: ${ALLOWED_EXTENSIONS.join(', ')}`)
+						fileInput.value = ''
+						renderBtn.disabled = false
+						return
+					}
+					text += '\n' + (await file.text())
+				}
 
 				const entries = parseEntries(text)
 				gallery.replaceChildren()
@@ -126,8 +147,6 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 					return
 				}
 
-				// Renderiza por lotes en frames sucesivos para que las tarjetas
-				// vayan apareciendo sobre la marcha sin bloquear la interfaz.
 				const BATCH_SIZE = 12
 				const nextFrame = () => new Promise(requestAnimationFrame)
 
