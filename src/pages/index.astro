@@ -1,5 +1,7 @@
 ---
 import '@/styles/global.css'
+import SmilesForm from '@/components/SmilesForm.astro'
+import MoleculeCard from '@/components/MoleculeCard.astro'
 ---
 
 <html lang="en">
@@ -7,85 +9,25 @@ import '@/styles/global.css'
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
-		<title>.smi</title>
-		<script is:inline src="https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js"></script>
+		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+		<link rel="manifest" href="/site.webmanifest">
+		<title>*.smi</title>
+		<script is:inline src="/RDKit_minimal.js"></script>
 	</head>
-	<body class="">
-		<header class="border-b border-slate-200 bg-white">
-			<div class="mx-auto max-w-5xl px-4 py-6">
-				<h1 class="text-2xl font-bold tracking-tight">Visor de SMILES</h1>
+	<body>
+		<main class="flex py-6 px-4">
+			<aside class="w-80 sticky top-6 self-start">
+				<SmilesForm />
+			</aside>
+			<div class="flex-1 min-w-0">
+				<section aria-labelledby="gallery-title" class="pl-4 mt-8">
+					<ul id="gallery" class="grid grid-cols-5 gap-4"></ul>
+				</section>
+
+				<MoleculeCard />
 			</div>
-		</header>
-
-		<main class="mx-auto max-w-5xl px-4 py-8">
-			<form id="smiles-form" class="grid gap-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-				<div class="grid gap-1.5">
-					<label for="smiles-text" class="text-sm font-medium">SMILES</label>
-					<textarea
-						id="smiles-text"
-						name="smiles-text"
-						rows="5"
-						placeholder={"CCO\nc1ccccc1\nCC(=O)Oc1ccccc1C(=O)O aspirina"}
-						class="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 font-mono text-sm shadow-inner placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-300 focus:outline-none"
-					></textarea>
-					<p class="text-xs text-slate-500">
-						Un compuesto por línea. Puedes añadir un nombre tras un espacio o tabulación.
-					</p>
-				</div>
-
-				<div class="grid gap-1.5">
-					<label for="smiles-file" class="text-sm font-medium">Archivo SMILES</label>
-					<input
-						id="smiles-file"
-						name="smiles-file"
-						type="file"
-						accept=".smi,.smiles,.txt,text/plain"
-						class="block w-full text-sm text-slate-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-slate-800 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-700"
-					/>
-				</div>
-
-				<div class="grid gap-1.5 sm:max-w-xs">
-					<label for="columns" class="text-sm font-medium">Moléculas por fila</label>
-					<select
-						id="columns"
-						name="columns"
-						class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-inner focus:border-slate-500 focus:ring-2 focus:ring-slate-300 focus:outline-none"
-					>
-						<option value="1">1</option>
-						<option value="2">2</option>
-						<option value="3" selected>3</option>
-						<option value="4">4</option>
-						<option value="5">5</option>
-						<option value="6">6</option>
-					</select>
-				</div>
-
-				<div class="flex flex-wrap items-center gap-3">
-					<button
-						id="render-btn"
-						type="submit"
-						disabled
-						class="inline-flex items-center rounded-lg bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-					>
-						Renderizar
-					</button>
-					<button
-						id="clear-btn"
-						type="reset"
-						class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-					>
-						Limpiar
-					</button>
-					<p id="status" role="status" aria-live="polite" class="text-sm text-slate-500">
-						Cargando RDKit…
-					</p>
-				</div>
-			</form>
-
-			<section aria-labelledby="gallery-title" class="mt-8">
-				<h2 id="gallery-title" class="sr-only">Galería de compuestos</h2>
-				<ul id="gallery" class="grid grid-cols-3 gap-4"></ul>
-			</section>
 		</main>
 
 		<script>
@@ -106,37 +48,31 @@ import '@/styles/global.css'
 			const textarea = document.querySelector<HTMLTextAreaElement>('#smiles-text')!
 			const fileInput = document.querySelector<HTMLInputElement>('#smiles-file')!
 			const renderBtn = document.querySelector<HTMLButtonElement>('#render-btn')!
-			const status = document.querySelector<HTMLParagraphElement>('#status')!
 			const gallery = document.querySelector<HTMLUListElement>('#gallery')!
-			const columns = document.querySelector<HTMLSelectElement>('#columns')!
+			const columns = document.querySelector<HTMLInputElement>('#columns')!
+			const columnsValue = document.querySelector<HTMLSpanElement>('#columns-value')!
+			const cardTemplate = document.querySelector<HTMLTemplateElement>('#card-template')!
 
-			// Clases literales para que Tailwind las incluya en el build.
-			const columnClasses = [
-				'grid-cols-1',
-				'grid-cols-2',
-				'grid-cols-3',
-				'grid-cols-4',
-				'grid-cols-5',
-				'grid-cols-6',
-			]
+			const columnClasses: Record<string, string> = {
+				'2': 'grid-cols-2',
+				'3': 'grid-cols-3',
+				'4': 'grid-cols-4',
+				'5': 'grid-cols-5',
+				'6': 'grid-cols-6',
+				'7': 'grid-cols-7',
+				'8': 'grid-cols-8',
+			}
 
 			const applyColumns = () => {
-				gallery.classList.remove(...columnClasses)
-				gallery.classList.add(columnClasses[Number(columns.value) - 1])
+				gallery.classList.remove(...Object.values(columnClasses))
+				gallery.classList.add(columnClasses[columns.value])
+				columnsValue.textContent = columns.value
 			}
-			columns.addEventListener('change', applyColumns)
+			columns.addEventListener('input', applyColumns)
 
 			// Inicializa RDKit una sola vez y habilita el botón al estar listo.
 			const rdkit = await window.initRDKitModule()
 			renderBtn.disabled = false
-			status.textContent = 'RDKit listo.'
-
-			const escapeHtml = (value: string) =>
-				value.replace(
-					/[&<>"']/g,
-					(c) =>
-						({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
-				)
 
 			// Cada entrada: primer token = SMILES, resto = nombre opcional.
 			const parseEntries = (text: string) =>
@@ -151,50 +87,32 @@ import '@/styles/global.css'
 
 			const renderCard = ({ smiles, name }: { smiles: string; name: string }) => {
 				const mol = rdkit.get_mol(smiles)
-				const li = document.createElement('li')
-				li.className =
-					'flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm'
+				const valid = !!mol && mol.is_valid()
+				const label = name || smiles
 
-				if (mol && mol.is_valid()) {
-					const svg = mol.get_svg(300, 300)
-					li.className += ' group'
-					li.innerHTML = `
-						<figure class="flex flex-1 flex-col">
-							<div class="flex aspect-square items-center justify-center bg-white p-2 [&_svg]:h-full [&_svg]:w-full">
-								${svg}
-							</div>
-							<figcaption class="truncate border-t border-slate-100 px-3 py-2 font-mono text-xs text-slate-600" title="${escapeHtml(name || smiles)}">
-								${escapeHtml(name || smiles)}
-							</figcaption>
-						</figure>
-						<div class="pointer-events-none invisible fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-6 opacity-0 transition-opacity duration-150 group-hover:visible group-hover:opacity-100">
-							<figure class="flex max-h-full max-w-full flex-col rounded-xl bg-white p-4 shadow-2xl">
-								<div class="[&_svg]:h-[70vmin] [&_svg]:w-[70vmin]">${svg}</div>
-								<figcaption class="mt-2 truncate text-center font-mono text-sm text-slate-700">
-									${escapeHtml(name || smiles)}
-								</figcaption>
-							</figure>
-						</div>`
-				} else {
-					li.innerHTML = `
-						<figure class="flex flex-1 flex-col">
-							<div class="flex aspect-square items-center justify-center bg-red-50 p-3 text-center text-xs font-medium text-red-600">
-								SMILES inválido
-							</div>
-							<figcaption class="truncate border-t border-slate-100 px-3 py-2 font-mono text-xs text-slate-600" title="${escapeHtml(smiles)}">
-								${escapeHtml(name || smiles)}
-							</figcaption>
-						</figure>`
-				}
+				const card = cardTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement
+
+				card.querySelectorAll<HTMLElement>('[data-svg]').forEach((el) => {
+					if (valid) {
+						el.innerHTML = mol!.get_svg(300, 300)
+					} else {
+						el.textContent = 'NULL'
+					}
+				})
+
+				// textContent escapa el contenido automáticamente.
+				card.querySelectorAll<HTMLElement>('[data-name]').forEach((el) => {
+					el.textContent = label
+					el.title = label
+				})
 
 				mol?.delete()
-				return li
+				return card
 			}
 
 			form.addEventListener('submit', async (event) => {
 				event.preventDefault()
 				renderBtn.disabled = true
-				status.textContent = 'Renderizando…'
 
 				let text = textarea.value
 				const file = fileInput.files?.[0]
@@ -204,24 +122,25 @@ import '@/styles/global.css'
 				gallery.replaceChildren()
 
 				if (entries.length === 0) {
-					status.textContent = 'Introduce al menos un SMILES.'
 					renderBtn.disabled = false
 					return
 				}
 
-				const fragment = document.createDocumentFragment()
-				for (const entry of entries) fragment.append(renderCard(entry))
-				gallery.append(fragment)
+				// Renderiza por lotes en frames sucesivos para que las tarjetas
+				// vayan apareciendo sobre la marcha sin bloquear la interfaz.
+				const BATCH_SIZE = 12
+				const nextFrame = () => new Promise(requestAnimationFrame)
 
-				status.textContent = `${entries.length} compuesto(s) renderizado(s).`
+				for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+					const fragment = document.createDocumentFragment()
+					for (const entry of entries.slice(i, i + BATCH_SIZE)) {
+						fragment.append(renderCard(entry))
+					}
+					gallery.append(fragment)
+					await nextFrame()
+				}
+
 				renderBtn.disabled = false
-			})
-
-			form.addEventListener('reset', () => {
-				gallery.replaceChildren()
-				status.textContent = 'RDKit listo.'
-				// El reset de los campos ocurre tras este evento; aplica luego.
-				setTimeout(applyColumns)
 			})
 		</script>
 	</body>
