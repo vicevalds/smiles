@@ -9,10 +9,17 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
+		<meta
+			name="description"
+			content="Paste or upload SMILES strings and render 2D molecule structures in the browser."/>
 		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 		<link rel="manifest" href="/site.webmanifest">
+		<link rel="preload" href="/RDKit_minimal.js" as="script" />
+		<link rel="preload" href="/RDKit_minimal.wasm" as="fetch" type="application/wasm" crossorigin />
+		<link rel="preload" href="/Geist%5Bwght%5D.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/GeistMono-Regular.woff2" as="font" type="font/woff2" crossorigin />
 		<title>*.smi</title>
 		<script is:inline src="/RDKit_minimal.js"></script>
 	</head>
@@ -23,6 +30,7 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 			</aside>
 			<div class="flex-1 min-w-0">
 				<section aria-labelledby="gallery-title" class="pl-4 mt-8">
+					<h2 id="gallery-title" class="sr-only">Rendered molecules</h2>
 					<ul id="gallery" class="grid grid-cols-5 gap-4"></ul>
 				</section>
 

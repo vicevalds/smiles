@@ -20,20 +20,20 @@
 	</div>
 
 	<div class="flex flex-col gap-2">
+		<label for="smiles-file" class="font-semibold">Upload SMILES file</label>
 		<input
 			id="smiles-file"
 			name="smiles-file"
 			type="file"
 			accept=".smi,.smiles,.txt,text/plain"
 			class="w-full border-2 hover:cursor-pointer hover:file:cursor-pointer border-accent file:p-1 file:bg-accent
-			file:text-black text-gray-500 hover:file:bg-white file:border-r-2 file:border-accent
-			file:font-semibold"
+			file:text-black text-gray-500 hover:file:bg-white file:border-r-2 file:border-accent"
 		/>
 	</div>
 
 	<div class="flex flex-col gap-2">
 		<label for="columns" class="flex items-center justify-between">
-			<span>SMILES per row</span>
+			<span class="font-semibold">SMILES per row</span>
 			<span id="columns-value" class="font-semibold tabular-nums">5</span>
 		</label>
 		<input
