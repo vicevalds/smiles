@@ -63,6 +63,7 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 				const ALLOWED_EXTENSIONS = ['.smi', '.smiles', '.txt']
 				const isAllowedFile = (file: File) =>
 					ALLOWED_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext))
+				const MAX_FILE_SIZE = 6.6 * 1048576
 
 				const columnClasses: Record<string, string> = {
 				'2': 'grid-cols-2',
@@ -121,21 +122,29 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 					document.head.append(script)
 				})
 
+			const RDKIT_DOWNLOADED_KEY = 'rdkit-downloaded'
+			const rdkitDownloaded = () => localStorage.getItem(RDKIT_DOWNLOADED_KEY) === '1'
+
 			let rdkitPromise: Promise<RDKitModule> | null = null
 			const loadRDKit = () => {
 				if (!rdkitPromise) {
 					rdkitPromise = (async () => {
+						const firstDownload = !rdkitDownloaded()
 						const [, wasmBinary] = await Promise.all([
 							loadScript('/RDKit_minimal.js'),
 							fetchWithProgress('/RDKit_minimal.wasm', (received, total) => {
+								if (!firstDownload) return
 								const totalMB = formatMB(Math.max(total, received))
 								showStatus(`Downloading RDKit ${formatMB(received)}/${totalMB} MB`)
 							}),
 						])
 						const module = await window.initRDKitModule({ wasmBinary })
-						showStatus('Downloading RDKit, done.')
 						renderBtn.disabled = false
-						setTimeout(clearStatus, 1000)
+						if (firstDownload) {
+							localStorage.setItem(RDKIT_DOWNLOADED_KEY, '1')
+							showStatus('Downloading RDKit, done.')
+							setTimeout(clearStatus, 2000)
+						}
 						return module
 					})()
 					rdkitPromise.catch(() => {
@@ -211,6 +220,12 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 				if (file) {
 					if (!isAllowedFile(file)) {
 						showError(`Allowed files: ${ALLOWED_EXTENSIONS.join(', ')}`)
+						fileInput.value = ''
+						renderBtn.disabled = false
+						return
+					}
+					if (file.size > MAX_FILE_SIZE) {
+						showError('File too large (max 6.6 MB).')
 						fileInput.value = ''
 						renderBtn.disabled = false
 						return
