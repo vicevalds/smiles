@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+:root {
+  --accent: var(--color-amber-200);
+}
+
+@theme {
+  --color-accent: var(--accent);
+  --font-mono: 'Geist Mono', monospace;
+}
+
+@layer base {
+  @font-face {
+    font-family: 'Geist';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url('/Geist[wght].woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Geist Mono';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url('/GeistMono[wght].woff2') format('woff2');
+  }
+  body {
+    font-family: 'Geist', sans-serif;
+  }
+}

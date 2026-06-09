@@ -1,0 +1,63 @@
+---
+---
+
+<form id="smiles-form" class="flex flex-col gap-6">
+	<div class="flex flex-col gap-2">
+		<label for="smiles-text" class="font-semibold">SMILES Viewer</label>
+		<textarea
+			id="smiles-text"
+			name="smiles-text"
+			rows="15"
+			placeholder={"CCOc1ccccc1CC(=O)Oc1ccccc1C(=O)O aspirina"}
+			class="text-md border-2 border-accent p-1 overflow-x-auto overflow-y-auto whitespace-nowrap
+				focus:outline-none focus:border-gray-300
+				[scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:var(--color-accent)_transparent]
+				[&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2
+				[&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-button]:size-0
+				[&::-webkit-scrollbar-track]:bg-transparent
+				[&::-webkit-scrollbar-thumb]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-accent"
+		></textarea>
+	</div>
+
+	<div class="flex flex-col gap-2">
+		<input
+			id="smiles-file"
+			name="smiles-file"
+			type="file"
+			accept=".smi,.smiles,.txt,text/plain"
+			class="w-full border-2 hover:cursor-pointer hover:file:cursor-pointer border-accent file:p-1 file:bg-accent
+			file:text-black text-gray-500 hover:file:bg-white file:border-r-2 file:border-accent
+			file:font-semibold"
+		/>
+	</div>
+
+	<div class="flex flex-col gap-2">
+		<label for="columns" class="flex items-center justify-between">
+			<span>SMILES per row</span>
+			<span id="columns-value" class="font-semibold tabular-nums">5</span>
+		</label>
+		<input
+			id="columns"
+			name="columns"
+			type="range"
+			min="2"
+			max="8"
+			step="1"
+			value="5"
+			class="w-full cursor-pointer appearance-none bg-transparent
+				[&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-gray-300
+				[&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:bg-accent
+				[&::-moz-range-track]:h-1.5 [&::-moz-range-track]:bg-accent
+				[&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-accent"
+		/>
+	</div>
+
+	<button
+		id="render-btn"
+		type="submit"
+		disabled
+		class="hover:bg-white border-2 border-accent bg-accent text-black font-semibold p-1 w-full hover:cursor-pointer"
+		>
+		Render
+	</button>
+</form>
