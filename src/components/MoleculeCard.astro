@@ -9,9 +9,11 @@
 				class="flex aspect-square items-center justify-center p-1 [&_svg]:h-full [&_svg]:w-full"
 			></div>
 			<figcaption
-				data-name
-				class="p-2 text-xs border-t border-accent truncate font-mono"
-			></figcaption>
+				class="flex items-center gap-2 p-2 text-xs border-t border-accent font-mono"
+			>
+				<span data-name class="min-w-0 flex-1 truncate"></span>
+				<span data-value class="shrink-0 tabular-nums text-gray-600"></span>
+			</figcaption>
 		</figure>
 	</li>
 </template>

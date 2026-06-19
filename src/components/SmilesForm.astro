@@ -25,7 +25,7 @@
 			id="smiles-file"
 			name="smiles-file"
 			type="file"
-			accept=".smi,.smiles,.txt,text/plain"
+			accept=".smi,.smiles,.txt,.csv,text/plain,text/csv"
 			class="w-full border-2 hover:cursor-pointer hover:file:cursor-pointer border-accent file:p-1 file:bg-accent
 			file:text-black text-gray-500 hover:file:bg-white file:border-r-2 file:border-accent"
 		/>
@@ -62,5 +62,18 @@
 		</button>
 		<p id="form-error" class="text-red-600 mt-2" role="alert" hidden></p>
 		<p id="form-status" class="text-gray-500 mt-2 tabular-nums" role="status" aria-live="polite" hidden></p>
+	</div>
+
+	<div id="display-panel" class="flex flex-col gap-2" hidden>
+		<span class="font-semibold">Display value</span>
+		<div id="column-options" class="flex flex-wrap text-sm gap-2" role="group"></div>
+		<button
+			id="sort-btn"
+			type="button"
+			disabled
+			class="bg-white border-2 border-accent hover:bg-accent text-black font-semibold p-1 w-full enabled:hover:cursor-pointer disabled:cursor-not-allowed"
+		>
+			Sort
+		</button>
 	</div>
 </form>
