@@ -2,10 +2,12 @@
 
 :root {
   --accent: var(--color-amber-200);
+  --accent-2: var(--color-gray-200);
 }
 
 @theme {
   --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
   --font-mono: 'Geist Mono', monospace;
 }
 
