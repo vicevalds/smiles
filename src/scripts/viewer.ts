@@ -20,9 +20,13 @@ const renderBtn = document.querySelector<HTMLButtonElement>('#render-btn')!
 const formError = document.querySelector<HTMLParagraphElement>('#form-error')!
 const formStatus = document.querySelector<HTMLParagraphElement>('#form-status')!
 const gallery = document.querySelector<HTMLUListElement>('#gallery')!
+const renderSummary = document.querySelector<HTMLParagraphElement>('#render-summary')!
+const summaryRendered = renderSummary.querySelector<HTMLElement>('[data-rendered]')!
+const summaryScaffolds = renderSummary.querySelector<HTMLElement>('[data-scaffolds]')!
 const columns = document.querySelector<HTMLInputElement>('#columns')!
 const columnsValue = document.querySelector<HTMLSpanElement>('#columns-value')!
 const cardTemplate = document.querySelector<HTMLTemplateElement>('#card-template')!
+const pillTemplate = document.querySelector<HTMLTemplateElement>('#pill-template')!
 const displayPanel = document.querySelector<HTMLDivElement>('#display-panel')!
 const columnOptions = document.querySelector<HTMLDivElement>('#column-options')!
 const sortBtn = document.querySelector<HTMLButtonElement>('#sort-btn')!
@@ -32,8 +36,8 @@ const isAllowedFile = (file: File) =>
 	ALLOWED_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext))
 const MAX_FILE_SIZE = 6.6 * 1048576
 
-const AMBER = 'var(--accent)'
-const COLORS = [AMBER, 'var(--accent-2)']
+// Number of alternating scaffold-group colours defined in the gallery styles.
+const GROUP_COLORS = 2
 
 const columnClasses: Record<string, string> = {
 	'2': 'grid-cols-2',
@@ -276,7 +280,7 @@ type Analyzed = Entry & { svg: string; key: string }
 const analyze = (rdkit: RDKitModule, entry: Entry): Analyzed => {
 	const mol = rdkit.get_mol(entry.smiles)
 	const valid = !!mol && mol.is_valid()
-	let svg = '<span class="text-2xl">;(</span>'
+	let svg = ''
 	let key = 'INVALID'
 	if (valid) {
 		svg = mol!.get_svg(300, 300)
@@ -294,7 +298,7 @@ const analyze = (rdkit: RDKitModule, entry: Entry): Analyzed => {
 // sorting can rearrange the gallery without re-running RDKit.
 let items: Analyzed[] = []
 let cards: HTMLLIElement[] = []
-let scaffoldColor: string[] = []
+let scaffoldGroup: number[] = []
 let selectedColumn: string | null = null
 let sortDir: 'none' | 'desc' | 'asc' = 'none'
 
@@ -308,16 +312,11 @@ const setCardValue = (card: HTMLLIElement, item: Analyzed) => {
 	el.title = v
 }
 
-const setCardColor = (card: HTMLLIElement, color: string) => {
-	card.style.borderColor = color
-	const fig = card.querySelector<HTMLElement>('figcaption')
-	if (fig) fig.style.borderTopColor = color
-}
-
-const buildCard = (item: Analyzed, color: string) => {
+const buildCard = (item: Analyzed, group: number) => {
 	const card = cardTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement
+	card.dataset.group = String(group)
 	const svgEl = card.querySelector<HTMLElement>('[data-svg]')
-	if (svgEl) svgEl.innerHTML = item.svg
+	if (svgEl && item.svg) svgEl.innerHTML = item.svg
 	const nameEl = card.querySelector<HTMLElement>('[data-name]')
 	if (nameEl) {
 		const label = item.id || item.smiles
@@ -325,7 +324,6 @@ const buildCard = (item: Analyzed, color: string) => {
 		nameEl.title = label
 	}
 	setCardValue(card, item)
-	setCardColor(card, color)
 	return card
 }
 
@@ -348,10 +346,10 @@ const computeOrder = (): number[] => {
 }
 
 const applyLayout = () => {
-	for (const idx of computeOrder()) {
-		setCardColor(cards[idx], sortDir === 'none' ? scaffoldColor[idx] : AMBER)
-		gallery.append(cards[idx])
-	}
+	// When sorted the scaffold grouping no longer holds, so the gallery flag tells
+	// the stylesheet to paint every card amber instead of the per-group colours.
+	gallery.toggleAttribute('data-sorted', sortDir !== 'none')
+	for (const idx of computeOrder()) gallery.append(cards[idx])
 }
 
 const refreshValues = () => {
@@ -363,12 +361,10 @@ const updateSortLabel = () => {
 }
 
 // Reflect the active selection on the pills (single-select, all-off allowed).
+// Styling is driven from the markup via the aria-pressed state.
 const updatePills = () => {
 	columnOptions.querySelectorAll<HTMLButtonElement>('[data-column]').forEach((pill) => {
-		const on = pill.dataset.column === selectedColumn
-		pill.classList.toggle('bg-accent', on)
-		pill.classList.toggle('text-black', on)
-		pill.setAttribute('aria-pressed', String(on))
+		pill.setAttribute('aria-pressed', String(pill.dataset.column === selectedColumn))
 	})
 }
 
@@ -385,12 +381,9 @@ const populatePanel = (cols: string[]) => {
 	displayPanel.hidden = false
 
 	for (const c of cols) {
-		const pill = document.createElement('button')
-		pill.type = 'button'
+		const pill = pillTemplate.content.firstElementChild!.cloneNode(true) as HTMLButtonElement
 		pill.dataset.column = c
 		pill.textContent = c
-		pill.className = 'border-2 border-accent px-2 py-1 cursor-pointer'
-		pill.setAttribute('aria-pressed', 'false')
 		columnOptions.append(pill)
 	}
 }
@@ -441,6 +434,13 @@ const clearStatus = () => {
 	formStatus.hidden = true
 }
 
+// Only fills the counts; the wording and styling live in the markup.
+const setSummary = (rendered: number, scaffolds: number) => {
+	summaryRendered.textContent = String(rendered)
+	summaryScaffolds.textContent = String(scaffolds)
+	renderSummary.hidden = rendered === 0
+}
+
 form.addEventListener('submit', async (event) => {
 	event.preventDefault()
 	renderBtn.disabled = true
@@ -468,7 +468,8 @@ form.addEventListener('submit', async (event) => {
 	gallery.replaceChildren()
 	items = []
 	cards = []
-	scaffoldColor = []
+	scaffoldGroup = []
+	setSummary(0, 0)
 	populatePanel([])
 
 	if (parsed.error) {
@@ -504,27 +505,29 @@ form.addEventListener('submit', async (event) => {
 	}
 	clearStatus()
 
-	// Group by scaffold (in order of first appearance) and alternate the
-	// border colour between groups: amber, orange, amber, …
-	const groupColor = new Map<string, string>()
+	// Group by scaffold (in order of first appearance); the group's parity drives
+	// the alternating border colour applied by the gallery stylesheet.
 	const groupOrder = new Map<string, number>()
 	for (const item of analyzed) {
-		if (groupColor.has(item.key)) continue
-		groupOrder.set(item.key, groupColor.size)
-		groupColor.set(item.key, COLORS[groupColor.size % COLORS.length])
+		if (!groupOrder.has(item.key)) groupOrder.set(item.key, groupOrder.size)
 	}
 
 	items = analyzed
 		.map((item, i) => ({ item, i }))
 		.sort((a, b) => groupOrder.get(a.item.key)! - groupOrder.get(b.item.key)! || a.i - b.i)
 		.map(({ item }) => item)
-	scaffoldColor = items.map((item) => groupColor.get(item.key)!)
+	scaffoldGroup = items.map((item) => groupOrder.get(item.key)! % GROUP_COLORS)
 
-	// Pass 2: append the grouped, colour-coded cards.
+	const uniqueScaffolds = [...groupOrder.keys()].filter(
+		(key) => key !== 'INVALID' && key !== 'ACYCLIC',
+	).length
+	setSummary(items.length, uniqueScaffolds)
+
+	// Pass 2: append the grouped cards.
 	for (let i = 0; i < items.length; i += BATCH_SIZE) {
 		const fragment = document.createDocumentFragment()
 		for (const item of items.slice(i, i + BATCH_SIZE)) {
-			const card = buildCard(item, scaffoldColor[cards.length])
+			const card = buildCard(item, scaffoldGroup[cards.length])
 			cards.push(card)
 			fragment.append(card)
 		}

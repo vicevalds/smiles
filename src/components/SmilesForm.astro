@@ -1,4 +1,10 @@
 ---
+const defaultSmiles = `CC(=O)Oc1ccccc1C(=O)O CHEMBL25
+CCN(CC)CCOC(=O)c1ccccc1OC(C)=O CHEMBL5314595
+CC(=O)Oc1ccccc1C(=O)O.NCCCCC(N)C(=O)O CHEMBL1697753
+C=CCc1ccc(OC(=O)c2ccccc2OC(C)=O)c(OC)c1 CHEMBL2260549
+CCN(CC)CCOC(=O)c1ccccc1OC(C)=O.Cl CHEMBL5314596
+COc1ccccc1OC(=O)c1ccccc1OC(C)=O CHEMBL2105097`
 ---
 
 <form id="smiles-form" class="flex flex-col gap-6">
@@ -8,15 +14,15 @@
 			id="smiles-text"
 			name="smiles-text"
 			rows="15"
-			placeholder={"CCOc1ccccc1CC(=O)Oc1ccccc1C(=O)O aspirina"}
-			class="text-md border-2 border-accent p-1 overflow-x-auto overflow-y-auto whitespace-nowrap
+			placeholder={defaultSmiles}
+			class="text-md border-2 border-accent p-1 pr-2 overflow-x-auto overflow-y-auto whitespace-nowrap placeholder:whitespace-pre
 				focus:outline-none focus:border-gray-300
 				[scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:var(--color-accent)_transparent]
 				[&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:w-2
 				[&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-button]:size-0
 				[&::-webkit-scrollbar-track]:bg-transparent
 				[&::-webkit-scrollbar-thumb]:bg-transparent hover:[&::-webkit-scrollbar-thumb]:bg-accent"
-		></textarea>
+		>{defaultSmiles}</textarea>
 	</div>
 
 	<div class="flex flex-col gap-2">
@@ -67,6 +73,13 @@
 	<div id="display-panel" class="flex flex-col gap-2" hidden>
 		<span class="font-semibold">Display value</span>
 		<div id="column-options" class="flex flex-wrap text-sm gap-2" role="group"></div>
+		<template id="pill-template">
+			<button
+				type="button"
+				aria-pressed="false"
+				class="border-2 border-accent px-2 py-1 cursor-pointer aria-pressed:bg-accent aria-pressed:text-black"
+			></button>
+		</template>
 		<button
 			id="sort-btn"
 			type="button"

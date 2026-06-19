@@ -30,3 +30,12 @@
     font-family: 'Geist', sans-serif;
   }
 }
+
+#gallery li[data-group='1'],
+#gallery li[data-group='1'] figcaption {
+  border-color: var(--accent-2);
+}
+#gallery[data-sorted] li,
+#gallery[data-sorted] li figcaption {
+  border-color: var(--accent);
+}

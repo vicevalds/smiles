@@ -25,7 +25,16 @@ import MoleculeCard from '@/components/MoleculeCard.astro'
 				<SmilesForm />
 			</aside>
 			<div class="flex-1 min-w-0">
-				<section aria-labelledby="gallery-title" class="pl-4 mt-8">
+				<div class="sticky top-0 z-10 -mt-6 pt-6 pb-2 pl-4 bg-white">
+					<p
+						id="render-summary"
+						class="tabular-nums text-gray-500"
+						role="status"
+						aria-live="polite"
+						hidden
+					><span class="text-black font-semibold" data-rendered>0</span> Molecules <span class="text-black font-semibold" data-scaffolds>0</span> Unique Scaffolds</p>
+				</div>
+				<section aria-labelledby="gallery-title" class="pl-4">
 					<h2 id="gallery-title" class="sr-only">Rendered molecules</h2>
 					<ul id="gallery" class="grid grid-cols-5 gap-4"></ul>
 				</section>
