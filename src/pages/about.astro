@@ -1,0 +1,36 @@
+---
+import AppShell from '@/components/AppShell.astro'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+---
+
+<BaseLayout
+	title="*.smi | About"
+	description="How the SMILES, REINVENT, and Nearest Neighbor viewers work."
+>
+	<AppShell active="about">
+		<section class="max-w-[40rem] pl-4">
+			<h1 class="text-5xl font-semibold leading-[52px]">About</h1>
+			<p class="mt-1 text-gray-500">
+				Paste SMILES or open a file to render 2D molecular structures. Everything runs in the
+				frontend, locally in your browser, so files are never uploaded. The site is designed
+				to process files up to 20 MB.
+			</p>
+
+			<dl class="mt-8 space-y-4 text-gray-500">
+				<div>
+					<dt class="font-semibold text-black">REINVENT</dt>
+					<dd>Browse molecules by step and graph numeric properties from a CSV or TSV output.</dd>
+				</div>
+				<div>
+					<dt class="font-semibold text-black">Nearest Neighbor</dt>
+					<dd>Inspect each query, then filter and sort its neighbors by similarity or value.</dd>
+				</div>
+			</dl>
+
+			<aside class="mt-8 border-l-2 border-accent pl-4 text-gray-500" aria-label="Keyboard shortcut">
+				<span class="font-semibold text-black">Shortcut:</span> use the left and right arrow keys
+				to move through the active Step or Query slicer.
+			</aside>
+		</section>
+	</AppShell>
+</BaseLayout>
