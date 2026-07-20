@@ -1,0 +1,123 @@
+---
+import ActionButton from '@/components/ActionButton.astro'
+import FormGroup from '@/components/FormGroup.astro'
+import PillButton from '@/components/PillButton.astro'
+import RangeInput from '@/components/RangeInput.astro'
+
+type Props = {
+	placeholderSmiles: string
+	uploadLabel: string
+	fileAccept: string
+	showColumns?: boolean
+	showDisplaySort?: boolean
+	blurOnEnter?: boolean
+}
+
+const {
+	placeholderSmiles,
+	uploadLabel,
+	fileAccept,
+	showColumns = true,
+	showDisplaySort = true,
+	blurOnEnter = false,
+} = Astro.props
+---
+
+<form
+	id="smiles-form"
+	class="flex flex-col gap-6"
+	data-blur-on-enter={blurOnEnter ? 'true' : undefined}
+>
+	<FormGroup>
+		<label for="smiles-text" class="sr-only">Molecule input</label>
+		<textarea
+			id="smiles-text"
+			name="smiles-text"
+			rows="11"
+			placeholder={placeholderSmiles}
+			class="scrollbar-hover text-md border-2 border-accent p-1 pr-2 overflow-x-auto overflow-y-auto whitespace-nowrap placeholder:whitespace-pre
+				focus:outline-none focus:border-gray-300"
+		></textarea>
+	</FormGroup>
+
+	<FormGroup>
+		<label for="smiles-file" class="font-semibold">{uploadLabel}</label>
+		<input
+			id="smiles-file"
+			name="smiles-file"
+			type="file"
+			accept={fileAccept}
+			class="w-full border-2 hover:cursor-pointer hover:file:cursor-pointer border-accent file:p-1 file:bg-accent
+			file:text-black text-gray-500 hover:file:bg-white file:border-r-2 file:border-accent"
+		/>
+	</FormGroup>
+
+	<div class="flex flex-col gap-2">
+		<ActionButton
+			id="render-btn"
+			type="submit"
+			disabled
+			variant="primary"
+			full
+		>
+			Render
+		</ActionButton>
+		<p class="text-gray-500">
+			or render an{' '}
+			<button
+				id="render-example"
+				type="button"
+				disabled
+				class="cursor-pointer p-0 text-black underline disabled:cursor-not-allowed disabled:text-gray-400 hover:text-gray-500"
+			>example</button>
+		</p>
+		<p id="form-error" class="text-red-600 mt-2" role="alert" hidden></p>
+		<p
+			id="form-status"
+			class="text-gray-500 tabular-nums transition-opacity [transition-duration:2000ms] ease-out data-[fading=true]:opacity-0 motion-reduce:transition-none"
+			role="status"
+			aria-live="polite"
+			hidden
+		></p>
+	</div>
+
+	{showColumns && <FormGroup id="columns-panel" hidden>
+		<label for="columns" class="flex items-center justify-between">
+			<span class="font-semibold">SMILES per row</span>
+			<span id="columns-value" class="font-semibold tabular-nums">5</span>
+		</label>
+		<RangeInput
+			id="columns"
+			name="columns"
+			min="2"
+			max="8"
+			step="1"
+			value="5"
+			class="w-full"
+		/>
+	</FormGroup>}
+
+	<FormGroup id="display-panel" hidden>
+		<span class="font-semibold">Display Value</span>
+		<div
+			id="column-options"
+			class="scrollbar-hover flex flex-wrap text-sm gap-2 max-h-48 overflow-y-auto"
+			role="group"
+		></div>
+		<template id="pill-template">
+			<PillButton aria-pressed="false" />
+		</template>
+		{showDisplaySort && (
+			<ActionButton
+				id="sort-btn"
+				disabled
+				full
+			>
+				Sort
+			</ActionButton>
+		)}
+	</FormGroup>
+	<slot name="form-options" />
+</form>
+
+<script src="@/scripts/form.ts"></script>

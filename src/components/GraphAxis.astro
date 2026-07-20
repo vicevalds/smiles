@@ -1,0 +1,15 @@
+---
+type Props = {
+	axis: 'x' | 'y'
+}
+
+const { axis } = Astro.props
+const dataAttribute = axis === 'x' ? { 'data-x-axis': '' } : { 'data-y-axis': '' }
+---
+
+<span class="shrink-0 font-mono text-xs text-gray-500">{axis.toUpperCase()} axis</span>
+<div
+	{...dataAttribute}
+	class="scrollbar-hover flex min-h-0 flex-1 flex-wrap content-start gap-2 overflow-y-auto overscroll-contain pr-1 text-sm"
+	role="group"
+></div>

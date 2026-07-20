@@ -1,0 +1,45 @@
+---
+import RangeInput from '@/components/RangeInput.astro'
+
+interface Props {
+	idPrefix: string
+	label: string
+	showTotal?: boolean
+	grow?: boolean
+}
+
+const { idPrefix, label, showTotal = false, grow = true } = Astro.props
+const slicerId = `${idPrefix}-slicer`
+const inputId = `${idPrefix}-input`
+const rangeId = `${idPrefix}-range`
+const totalId = `${idPrefix}-total`
+---
+
+<div
+	id={slicerId}
+	class:list={['flex min-w-0 items-center gap-2', grow ? 'flex-1' : 'shrink-0']}
+	hidden
+>
+	<label for={inputId} class="inline-flex items-center gap-2 whitespace-nowrap tabular-nums text-gray-500">
+		<span>{label}</span>
+		<span class="inline-flex items-center">
+			<input
+				id={inputId}
+				type="text"
+				inputmode="numeric"
+				value="1"
+				class="w-12 border-0 border-b-2 border-accent bg-transparent p-0 text-right font-semibold tabular-nums text-black
+					focus:border-gray-400 focus:outline-none"
+			/>{showTotal && <><span aria-hidden="true">/</span><span id={totalId} class="inline-block w-12 text-left font-semibold text-black">0</span></>}
+		</span>
+	</label>
+	<RangeInput
+		id={rangeId}
+		min="0"
+		max="0"
+		step="1"
+		value="0"
+		aria-label={`${label} slider`}
+		class="w-48"
+	/>
+</div>

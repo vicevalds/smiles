@@ -1,0 +1,31 @@
+---
+import type { HTMLAttributes } from 'astro/types'
+
+interface Props extends HTMLAttributes<'button'> {
+	variant?: 'primary' | 'secondary'
+	full?: boolean
+}
+
+const {
+	variant = 'secondary',
+	full = false,
+	class: className,
+	type = 'button',
+	...attributes
+} = Astro.props
+---
+
+<button
+	{...attributes}
+	type={type}
+	class:list={[
+		'border-2 p-1 font-semibold text-black enabled:hover:cursor-pointer disabled:cursor-not-allowed',
+		variant === 'primary'
+			? 'border-accent bg-accent hover:bg-white'
+			: 'border-accent-2 bg-white hover:bg-accent-2',
+		full && 'w-full',
+		className,
+	]}
+>
+	<slot />
+</button>

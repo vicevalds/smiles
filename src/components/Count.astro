@@ -1,0 +1,10 @@
+---
+type Props = {
+	dataAttribute: 'rendered' | 'filtered-total-rendered' | 'total-rendered'
+}
+
+const { dataAttribute } = Astro.props
+const attributes = { [`data-${dataAttribute}`]: '' }
+---
+
+<span {...attributes} class="font-semibold text-black"><slot /></span>

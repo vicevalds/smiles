@@ -1,0 +1,31 @@
+---
+import SidebarNav from '@/components/SidebarNav.astro'
+
+type Props = {
+	active?: 'smiles' | 'reinvent' | 'nn'
+	viewerMode?: 'smiles' | 'reinvent'
+}
+
+const { active, viewerMode } = Astro.props
+---
+
+<main
+	class="flex px-4 py-8 max-sm:min-h-dvh max-sm:flex-col"
+	data-viewer-mode={viewerMode}
+>
+	<aside class="sticky top-8 flex w-80 flex-col gap-6 self-start max-sm:static max-sm:w-full">
+		<SidebarNav {active} />
+		<div class="max-sm:hidden">
+			<slot name="sidebar" />
+		</div>
+	</aside>
+	<div class="min-w-0 flex-1 max-sm:hidden">
+		<slot />
+	</div>
+	<section class="flex flex-1 items-center justify-center text-center sm:hidden">
+		<h1 class="max-w-sm text-xl font-semibold">
+			<span class="block">This website is designed</span>
+			<span class="block">for desktop use only.</span>
+		</h1>
+	</section>
+</main>

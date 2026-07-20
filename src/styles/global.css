@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  --accent: var(--color-amber-200);
+  --accent-2: var(--color-gray-200);
+}
+
+@theme {
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --font-mono: 'Geist Mono', monospace;
+}
+
+@layer base {
+  @font-face {
+    font-family: 'Geist';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url('/Geist[wght].woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Geist Mono';
+    font-style: normal;
+    font-display: swap;
+    font-weight: 100 900;
+    src: url('/GeistMono-Regular.woff2') format('woff2');
+  }
+  body {
+    font-family: 'Geist', sans-serif;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hover {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .scrollbar-hover:hover {
+    scrollbar-color: var(--color-accent) transparent;
+  }
+
+  .scrollbar-hover::-webkit-scrollbar {
+    width: 0.5rem;
+    height: 0.5rem;
+  }
+
+  .scrollbar-hover::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .scrollbar-hover::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-hover::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+
+  .scrollbar-hover:hover::-webkit-scrollbar-thumb {
+    background: var(--color-accent);
+  }
+}

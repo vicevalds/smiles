@@ -1,0 +1,72 @@
+---
+import AppShell from '@/components/AppShell.astro'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import GraphTemplates from '@/components/GraphTemplates.astro'
+import MoleculeCard from '@/components/MoleculeCard.astro'
+import Slicer from '@/components/Slicer.astro'
+import SmilesForm from '@/components/SmilesForm.astro'
+import TopBar from '@/components/TopBar.astro'
+import { REINVENT_EXAMPLE, SMILES_EXAMPLE } from '@/scripts/lib/examples'
+
+type Props = {
+	mode: 'smiles' | 'reinvent'
+}
+
+const { mode } = Astro.props
+const isReinvent = mode === 'reinvent'
+---
+
+<BaseLayout
+	title={isReinvent ? '*.smi | REINVENT' : '*.smi'}
+	description={isReinvent
+		? 'View and graph REINVENT output in the browser.'
+		: 'Paste or upload SMILES strings and render 2D molecule structures in the browser.'}
+>
+	<AppShell active={mode} viewerMode={mode}>
+		<SmilesForm
+			slot="sidebar"
+			placeholderSmiles={isReinvent ? REINVENT_EXAMPLE : SMILES_EXAMPLE}
+			blurOnEnter={isReinvent}
+			uploadLabel={isReinvent ? 'Upload a .csv/.tsv file' : 'Upload a .smi file'}
+			fileAccept={isReinvent
+				? '.csv,.tsv,text/csv,text/tab-separated-values,text/plain'
+				: '.smi'}
+		/>
+
+		<TopBar
+			summaryLabel="Molecules"
+			totalLabel="Molecules"
+			sticky={!isReinvent}
+			controlsFirst={isReinvent}
+		>
+			<Slicer
+				slot="controls"
+				idPrefix="step"
+				label="Step"
+				showTotal={isReinvent}
+				grow={!isReinvent}
+			/>
+		</TopBar>
+
+		<section id="gallery-section" aria-labelledby="gallery-title" class="pl-4">
+			<h1 id="gallery-title" class="sr-only">Rendered molecules</h1>
+			<ul
+				id="gallery"
+				data-columns="5"
+				class="grid gap-4 data-[columns='2']:grid-cols-2 data-[columns='3']:grid-cols-3 data-[columns='4']:grid-cols-4 data-[columns='5']:grid-cols-5 data-[columns='6']:grid-cols-6 data-[columns='7']:grid-cols-7 data-[columns='8']:grid-cols-8"
+			></ul>
+		</section>
+
+		{isReinvent && (
+			<section id="graphs-section" aria-labelledby="graphs-title" class="pl-4" hidden>
+				<h1 id="graphs-title" class="sr-only">Graphs</h1>
+				<ul id="graphs" class="grid grid-cols-3 gap-4"></ul>
+			</section>
+		)}
+
+		<MoleculeCard />
+		{isReinvent && <GraphTemplates />}
+	</AppShell>
+
+	<script src="@/scripts/viewer.ts"></script>
+</BaseLayout>

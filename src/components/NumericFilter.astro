@@ -1,0 +1,44 @@
+---
+import ControlRow from '@/components/ControlRow.astro'
+import PillButton from '@/components/PillButton.astro'
+
+interface Props {
+	id: string
+	label: string
+	defaultValue?: string
+	placeholder?: string
+	min?: number
+}
+
+const { id, label, defaultValue, placeholder = '0.0', min } = Astro.props
+---
+
+<ControlRow id={id} {label} wideLabel hidden>
+		<PillButton
+			id={`${id}-operator`}
+			aria-label={`${label} comparison: greater than`}
+			grow={false}
+			padded={false}
+			class="w-12 shrink-0"
+		>&gt;</PillButton>
+		<input
+			id={`${id}-input`}
+			type="number"
+			inputmode="decimal"
+			step="any"
+			min={min}
+			value={defaultValue}
+			placeholder={placeholder}
+			aria-label={`${label} value`}
+			class="h-full w-16 shrink-0 appearance-none border-0 border-b-2 border-accent bg-transparent p-0 text-right font-semibold tabular-nums text-black
+				[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none
+				focus:border-gray-400 focus:outline-none"
+		/>
+		<PillButton
+			id={`${id}-toggle`}
+			aria-pressed="false"
+			grow={false}
+			padded={false}
+			class="w-16 shrink-0"
+		>Off</PillButton>
+</ControlRow>

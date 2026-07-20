@@ -1,0 +1,109 @@
+---
+import ActionButton from '@/components/ActionButton.astro'
+import GraphAxis from '@/components/GraphAxis.astro'
+import PillButton from '@/components/PillButton.astro'
+---
+
+<template id="chart-template">
+	<li class="flex flex-col overflow-hidden border-2 border-accent-2">
+		<div class="flex items-center justify-between gap-2 border-b border-accent-2 p-2">
+			<span data-title class="min-w-0 flex-1 truncate font-mono text-xs"></span>
+			<PillButton data-stat aria-label="Cycle statistic" grow={false} padded={false} class="w-[calc(6ch+1rem)] shrink-0 px-1.5 font-mono text-xs leading-none">
+				Mean
+			</PillButton>
+			<button
+				data-remove
+				type="button"
+				aria-label="Remove graph"
+				class="shrink-0 cursor-pointer px-1 font-semibold leading-none hover:text-red-600"
+			>&times;</button>
+		</div>
+		<div
+			data-plot
+			class="p-2 [&_svg]:h-auto [&_svg]:w-full [&_svg]:select-none [&_svg]:font-mono [&_[data-axis-label]]:text-[11px] [&_[data-chart-tip]]:text-[10px] [&_[data-chart-overlay]]:cursor-crosshair"
+		></div>
+	</li>
+</template>
+
+<template id="creator-template">
+	<li data-creator class="flex aspect-[9/8] w-full min-h-80 flex-col gap-2 overflow-hidden border-2 border-dashed border-gray-300 p-3">
+		<GraphAxis axis="y" />
+		<GraphAxis axis="x" />
+		<ActionButton data-create disabled class="shrink-0">Create</ActionButton>
+	</li>
+</template>
+
+<template id="plot-empty-template">
+	<p class="text-sm text-gray-500">No data to plot.</p>
+</template>
+
+<style is:global>
+	[data-plot] {
+		--chart-axis: var(--color-gray-500);
+		--chart-band: var(--color-accent-2);
+		--chart-line: var(--color-gray-600);
+		--chart-muted: var(--color-gray-400);
+		--chart-strong: var(--color-gray-700);
+	}
+
+	.chart-root {
+		color: var(--chart-axis);
+	}
+
+	.chart-band {
+		fill: var(--chart-band);
+		fill-opacity: 0.25;
+	}
+
+	.chart-line {
+		fill: none;
+		stroke: var(--chart-line);
+		stroke-width: 1.5;
+	}
+
+	.chart-point {
+		fill: var(--chart-line);
+		r: 2.5;
+	}
+
+	[data-axis-label],
+	[data-chart-tip] {
+		fill: var(--chart-line);
+	}
+
+	.chart-crosshair {
+		stroke: var(--chart-muted);
+		stroke-dasharray: 3 3;
+	}
+
+	.chart-hover-point {
+		fill: none;
+		r: 4;
+		stroke: var(--chart-strong);
+		stroke-width: 1.5;
+	}
+
+	.chart-tooltip-bg {
+		fill: white;
+		rx: 2;
+		stroke: var(--chart-muted);
+	}
+
+	[data-chart-hover][data-visible='false'],
+	[data-chart-tip-box][data-visible='false'] {
+		display: none;
+	}
+
+	[data-chart-tip-box] {
+		pointer-events: none;
+	}
+
+	[data-chart-overlay] {
+		fill: none;
+		pointer-events: all;
+	}
+
+	[data-creator] {
+		contain: size;
+	}
+</style>

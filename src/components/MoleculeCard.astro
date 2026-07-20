@@ -1,0 +1,56 @@
+---
+import CopyButton from '@/components/CopyButton.astro'
+
+interface Props {
+	templateId?: string
+	borderColorClass?: string
+	cardClass?: string
+	figureClass?: string
+	imageClass?: string
+	captionClass?: string
+}
+
+const {
+	templateId = 'card-template',
+	borderColorClass = 'border-accent-2',
+	cardClass = '',
+	figureClass = '',
+	imageClass = '',
+	captionClass = '',
+} = Astro.props
+---
+
+<template id={templateId}>
+	<li
+		class:list={[
+			'group flex flex-col overflow-hidden border-2 data-[variant=cutoff]:border-accent data-[variant=query]:border-accent-2',
+			borderColorClass,
+			cardClass,
+		]}
+	>
+		<figure class:list={['flex flex-col', figureClass]}>
+			<div class:list={['relative aspect-square', imageClass]}>
+				<span
+					data-rank
+					class="absolute left-1 top-1 z-10 bg-white px-1 font-mono text-[10px] font-semibold leading-4 tabular-nums text-gray-600"
+					hidden
+				></span>
+				<CopyButton class="absolute right-1 top-1 z-10" hidden />
+				<div
+					data-svg
+					class="flex h-full w-full items-center justify-center p-1 [&_svg]:h-full [&_svg]:w-full"
+				><span class="text-2xl">;(</span></div>
+			</div>
+			<figcaption
+				class:list={[
+					'flex h-9 items-center gap-2 border-t p-2 font-mono text-xs group-data-[variant=cutoff]:border-accent group-data-[variant=query]:border-accent-2',
+					borderColorClass,
+					captionClass,
+				]}
+			>
+				<span data-name class="min-w-0 flex-1 truncate"></span>
+				<span data-value class="shrink-0 tabular-nums text-gray-600"></span>
+			</figcaption>
+		</figure>
+	</li>
+</template>

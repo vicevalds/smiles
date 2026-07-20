@@ -1,0 +1,51 @@
+---
+type Props = {
+	active?: 'smiles' | 'reinvent' | 'nn'
+}
+
+const { active } = Astro.props
+
+const linkClass = (page: Props['active']) => [
+	'font-semibold transition-colors',
+	active === page ? 'text-black' : 'text-gray-400 hover:text-gray-600',
+]
+
+const sections: { page: Props['active']; href: string; label: string }[] = [
+	{ page: 'smiles', href: '/', label: 'SMILES' },
+	{ page: 'reinvent', href: '/reinvent', label: 'REINVENT' },
+	{ page: 'nn', href: '/nn', label: 'Nearest Neighbor' },
+]
+
+const views = [
+	{ id: 'viewer', label: 'Viewer' },
+	{ id: 'graphs', label: 'Graph' },
+]
+---
+
+<nav aria-label="Viewer sections">
+	<ul class="flex flex-col gap-1">
+		{sections.map(({ page, href, label }) => (
+			<li class="flex items-baseline gap-2">
+				<a {href} aria-current={active === page ? 'page' : undefined} class:list={linkClass(page)}>
+					{label}
+				</a>
+				{active === page && page !== 'reinvent' && <span class="font-semibold text-black">Viewer</span>}
+				{active === page && page === 'reinvent' && (
+					<div id="view-toggle" class="inline-flex items-center gap-1" role="group" aria-label="REINVENT view">
+						{views.map(({ id, label: viewLabel }, index) => (
+							<>
+								{index > 0 && <span aria-hidden="true" class="text-gray-400">/</span>}
+								<button
+									type="button"
+									data-view={id}
+									aria-pressed={index === 0 ? 'true' : 'false'}
+									class="cursor-pointer font-semibold text-gray-400 transition-colors hover:text-gray-600 aria-pressed:text-black"
+								>{viewLabel}</button>
+							</>
+						))}
+					</div>
+				)}
+			</li>
+		))}
+	</ul>
+</nav>

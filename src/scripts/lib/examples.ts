@@ -1,0 +1,58 @@
+export const SMILES_EXAMPLE = `CCO Ethanol
+CCN Ethylamine
+CC(=O)O Acetic acid
+CCOC(=O)C Ethyl acetate
+c1ccccc1 Benzene
+CCc1ccccc1 Ethylbenzene
+O=C(O)c1ccccc1 Benzoic acid
+CC(=O)Oc1ccccc1C(=O)O Aspirin
+CC(C)Cc1ccc(cc1)[C@@H](C)C(=O)O Ibuprofen`
+
+export const REINVENT_EXAMPLE = `Step,SMILES,Agent,Prior,Target,Score,SMILES_state
+0,CCO,-1.42,-1.35,0.10,0.08,1
+0,CCN,-1.51,-1.44,0.14,0.11,1
+0,CCC,-1.38,-1.31,0.08,0.07,1
+0,CCCO,-1.47,-1.39,0.18,0.14,1
+0,CCCN,-1.58,-1.49,0.21,0.16,1
+0,CCOC,-1.62,-1.53,0.24,0.19,1
+0,CCNC,-1.66,-1.57,0.27,0.21,1
+0,CC(=O)O,-1.71,-1.62,0.31,0.25,1
+1,c1ccccc1,-1.35,-1.28,0.38,0.31,1
+1,Cc1ccccc1,-1.31,-1.24,0.42,0.35,1
+1,Oc1ccccc1,-1.44,-1.36,0.47,0.39,1
+1,Nc1ccccc1,-1.49,-1.41,0.45,0.37,1
+1,COc1ccccc1,-1.38,-1.30,0.51,0.43,1
+1,CCc1ccccc1,-1.29,-1.22,0.49,0.41,1
+1,O=C(O)c1ccccc1,-1.53,-1.45,0.56,0.47,1
+1,N#Cc1ccccc1,-1.47,-1.39,0.54,0.46,1
+2,c1ccncc1,-1.26,-1.20,0.61,0.52,1
+2,c1ccoc1,-1.33,-1.26,0.58,0.49,1
+2,c1ccsc1,-1.37,-1.30,0.57,0.48,1
+2,c1ccc2ccccc2c1,-1.18,-1.12,0.64,0.55,1
+2,CC(=O)Nc1ccccc1,-1.24,-1.17,0.68,0.59,1
+2,CCOc1ccccc1,-1.21,-1.15,0.66,0.57,1
+2,O=C(N)c1ccccc1,-1.28,-1.21,0.70,0.61,1
+2,Clc1ccccc1,-1.30,-1.23,0.63,0.54,1
+3,CC(=O)Oc1ccccc1C(=O)O,-1.05,-1.01,0.76,0.67,1
+3,CC(C)Cc1ccc(cc1)C(C)C(=O)O,-0.98,-0.95,0.79,0.71,1
+3,CC(=O)Nc1ccc(O)cc1,-1.01,-0.97,0.82,0.74,1
+3,CN1CCC(c2ccccc2)CC1,-0.94,-0.91,0.78,0.70,1
+3,COc1ccc(CCN)cc1,-0.97,-0.93,0.84,0.76,1
+3,O=C(O)C1CCCCC1,-1.08,-1.03,0.73,0.65,1
+3,CCN(CC)CCOc1ccccc1,-0.91,-0.88,0.81,0.73,1
+3,COc1ccc(C(=O)N)cc1,-0.99,-0.95,0.86,0.78,1
+4,Cn1c(=O)c2c(ncn2C)n(C)c1=O,-0.82,-0.80,0.91,0.84,1
+4,CN1CCC[C@H]1c2cccnc2,-0.78,-0.76,0.88,0.81,1
+4,CCN(CC)C(=O)c1c(N(C)C)cccc1,-0.75,-0.73,0.93,0.86,1
+4,COc1ccc2[nH]cc(CCNC(C)C)c2c1,-0.71,-0.70,0.95,0.89,1
+4,CC(C)NCC(O)c1ccc(O)cc1,-0.76,-0.74,0.90,0.83,1
+4,O=C(NCc1ccccc1)c2ccccc2,-0.73,-0.71,0.94,0.87,1
+4,CCOC(=O)N1CCC(CC1)c2ccccc2,-0.69,-0.68,0.97,0.91,1
+4,CN(C)CCc1ccc(O)cc1,-0.72,-0.70,0.92,0.85,1`
+
+export const NEIGHBOR_EXAMPLE = `query,tanimoto,query_SMILES,compound_SMILES,compound_name,demo_score
+RIVAROXABAN,0.62,O=C(NC[C@H]1CN(c2ccc(N3CCOCC3=O)cc2)C(=O)O1)c1ccc(Cl)s1,COC1=CC=C(C=C1)N2C3=C(CCN(C3=O)C4=CC=C(C=C4)N5CCCCC5=O)C(=N2)C(=O)N,APIXABAN,82
+RIVAROXABAN,0.32,O=C(NC[C@H]1CN(c2ccc(N3CCOCC3=O)cc2)C(=O)O1)c1ccc(Cl)s1,CCOC(=O)c1ccccc1,ETHYL BENZOATE,45
+APIXABAN,1.00,COC1=CC=C(C=C1)N2C3=C(CCN(C3=O)C4=CC=C(C=C4)N5CCCCC5=O)C(=N2)C(=O)N,COC1=CC=C(C=C1)N2C3=C(CCN(C3=O)C4=CC=C(C=C4)N5CCCCC5=O)C(=N2)C(=O)N,APIXABAN,98
+APIXABAN,0.62,COC1=CC=C(C=C1)N2C3=C(CCN(C3=O)C4=CC=C(C=C4)N5CCCCC5=O)C(=N2)C(=O)N,O=C(NC[C@H]1CN(c2ccc(N3CCOCC3=O)cc2)C(=O)O1)c1ccc(Cl)s1,RIVAROXABAN,80
+APIXABAN,0.28,COC1=CC=C(C=C1)N2C3=C(CCN(C3=O)C4=CC=C(C=C4)N5CCCCC5=O)C(=N2)C(=O)N,CCOC(=O)c1ccccc1,ETHYL BENZOATE,40`
