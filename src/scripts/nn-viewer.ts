@@ -3,6 +3,11 @@ import { formatMB, isAllowedFile, MAX_FILE_SIZE, readTextInput } from './lib/fil
 import { createRDKitLoader, requestIdle, type RDKitModule } from './lib/rdkit'
 import { bindHorizontalArrows, createCopyHandler, createMessageController, restrictToDigits, setText } from './lib/dom'
 import { createStatusController } from './lib/status'
+import {
+	MOLECULAR_MASS_COLUMN,
+	MolecularMassResolver,
+	withMolecularMassColumn,
+} from './lib/molecular-mass'
 
 type SortMode = 'desc' | 'asc'
 type ActiveSort = 'similarity' | 'value'
@@ -63,7 +68,6 @@ const queryTotal = document.querySelector<HTMLSpanElement>('#query-total')!
 const cardTemplate = document.querySelector<HTMLTemplateElement>('#card-template')!
 
 const ALLOWED_EXTENSIONS = ['.csv', '.tsv']
-const ATOMIC_MASS_COLUMN = 'Atomic Mass'
 const numericFilterOperatorCycle: NumericFilterOperator[] = ['>', '<', '=']
 
 const createNumericFilterControl = (
@@ -198,7 +202,7 @@ let sortMode: SortMode = 'desc'
 let valueSortMode: SortMode = 'desc'
 let activeSort: ActiveSort = 'similarity'
 const svgCache = new Map<string, string>()
-const molecularMassCache = new Map<string, string>()
+const molecularMass = new MolecularMassResolver()
 let activeNeighbors: Neighbor[] = []
 let activeRanks = new Map<Neighbor, number>()
 let svgRenderToken = 0
@@ -341,37 +345,6 @@ const buildGroups = (rows: Neighbor[]): QueryGroup[] => {
 
 const formatTanimoto = (value: number | null) => (value === null ? 'n/a' : value.toFixed(3))
 
-const cacheMolecularMass = (smiles: string, descriptorsJson: string) => {
-	try {
-		const descriptors = JSON.parse(descriptorsJson) as { amw?: unknown }
-		const mass = Number(descriptors.amw)
-		molecularMassCache.set(smiles, Number.isFinite(mass) ? mass.toFixed(1) : '')
-	} catch {
-		molecularMassCache.set(smiles, '')
-	}
-}
-
-const getMolecularMass = (smiles: string) => {
-	const cached = molecularMassCache.get(smiles)
-	if (cached !== undefined) return cached
-	if (!rdkitModule) return ''
-
-	const mol = rdkitModule.get_mol(smiles)
-	try {
-		if (!mol?.is_valid()) {
-			molecularMassCache.set(smiles, '')
-			return ''
-		}
-		cacheMolecularMass(smiles, mol.get_descriptors())
-		return molecularMassCache.get(smiles) ?? ''
-	} catch {
-		molecularMassCache.set(smiles, '')
-		return ''
-	} finally {
-		mol?.delete()
-	}
-}
-
 const generateSvg = (smiles: string): string => {
 	const cached = svgCache.get(smiles)
 	if (cached !== undefined) {
@@ -386,11 +359,11 @@ const generateSvg = (smiles: string): string => {
 			if (mol?.is_valid()) {
 				svg = mol.get_svg(300, 300)
 				try {
-					cacheMolecularMass(smiles, mol.get_descriptors())
+					molecularMass.cacheDescriptors(smiles, mol.get_descriptors())
 				} catch {
-					molecularMassCache.set(smiles, '')
+					molecularMass.cacheDescriptors(smiles, '')
 				}
-			} else molecularMassCache.set(smiles, '')
+			} else molecularMass.cacheDescriptors(smiles, '')
 		} finally {
 			mol?.delete()
 		}
@@ -402,7 +375,7 @@ const generateSvg = (smiles: string): string => {
 		const oldest = svgCache.keys().next().value
 		if (oldest !== undefined) {
 			svgCache.delete(oldest)
-			molecularMassCache.delete(oldest)
+			molecularMass.delete(oldest)
 		}
 	}
 	return svg
@@ -471,21 +444,20 @@ const scheduleSvgRender = (cards: HTMLLIElement[]) => {
 }
 
 const selectedDisplayValue = (neighbor: Neighbor) => {
-	if (selectedDisplayColumn === ATOMIC_MASS_COLUMN) {
-		return getMolecularMass(neighbor.compoundSmiles)
+	if (selectedDisplayColumn === MOLECULAR_MASS_COLUMN) {
+		return molecularMass.get(neighbor.compoundSmiles, rdkitModule)
 	}
 	return selectedDisplayColumn ? (neighbor.props[selectedDisplayColumn] ?? '') : ''
 }
 
 const formatSelectedDisplayValue = (neighbor: Neighbor) => {
 	const value = selectedDisplayValue(neighbor)
-	return value && selectedDisplayColumn === ATOMIC_MASS_COLUMN ? `${value} Da` : value
+	return value && selectedDisplayColumn === MOLECULAR_MASS_COLUMN ? `${value} Da` : value
 }
 
 const selectedQueryDisplayValue = (group: QueryGroup) => {
-	if (selectedDisplayColumn !== ATOMIC_MASS_COLUMN) return group.name
-	const mass = getMolecularMass(group.smiles)
-	return mass ? `${mass} Da` : ''
+	if (selectedDisplayColumn !== MOLECULAR_MASS_COLUMN) return group.name
+	return molecularMass.format(group.smiles, rdkitModule)
 }
 
 const matchesSimilarityFilter = (neighbor: Neighbor) =>
@@ -565,10 +537,10 @@ const updateDisplayPills = () => {
 }
 
 const populateDisplayPanel = (columns: string[]) => {
-	displayColumns = [ATOMIC_MASS_COLUMN, ...columns.filter((column) => column !== ATOMIC_MASS_COLUMN)]
+	displayColumns = withMolecularMassColumn(columns)
 	selectedDisplayColumn = displayColumns.includes(selectedDisplayColumn ?? '')
 		? selectedDisplayColumn
-		: ATOMIC_MASS_COLUMN
+		: MOLECULAR_MASS_COLUMN
 	columnOptions.replaceChildren()
 	displayPanel.hidden = false
 	for (const column of displayColumns) {
@@ -689,7 +661,7 @@ const renderInput = async () => {
 	sortMode = 'desc'
 	valueSortMode = 'desc'
 	activeSort = 'similarity'
-	selectedDisplayColumn = ATOMIC_MASS_COLUMN
+	selectedDisplayColumn = MOLECULAR_MASS_COLUMN
 	valueFilterControl.reset()
 	populateDisplayPanel(displayColumns)
 	updateSortLabel()

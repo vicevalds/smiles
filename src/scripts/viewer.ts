@@ -4,6 +4,11 @@ import { isAllowedFile, MAX_FILE_SIZE } from './lib/files'
 import { createRDKitLoader, requestIdle, type RDKitModule } from './lib/rdkit'
 import { bindHorizontalArrows, createCopyHandler, createMessageController, restrictToDigits, setTitledText } from './lib/dom'
 import { createStatusController } from './lib/status'
+import {
+	MOLECULAR_MASS_COLUMN,
+	MolecularMassResolver,
+	withMolecularMassColumn,
+} from './lib/molecular-mass'
 
 const form = document.querySelector<HTMLFormElement>('#smiles-form')!
 const textarea = document.querySelector<HTMLTextAreaElement>('#smiles-text')!
@@ -119,6 +124,7 @@ let items: Entry[] = []
 
 let rdkitModule: RDKitModule | null = null
 const svgCache = new Map<number, string>()
+const molecularMass = new MolecularMassResolver()
 const SVG_CACHE_CAP = 800
 const generateSvg = (index: number): string => {
 	const cached = svgCache.get(index)
@@ -130,8 +136,18 @@ const generateSvg = (index: number): string => {
 	let svg = ''
 	if (rdkitModule) {
 		const mol = rdkitModule.get_mol(items[index].smiles)
-		if (mol && mol.is_valid()) svg = mol.get_svg(300, 300)
-		mol?.delete()
+		try {
+			if (mol?.is_valid()) {
+				svg = mol.get_svg(300, 300)
+				try {
+					molecularMass.cacheDescriptors(items[index].smiles, mol.get_descriptors())
+				} catch {
+					molecularMass.cacheDescriptors(items[index].smiles, '')
+				}
+			}
+		} finally {
+			mol?.delete()
+		}
 	}
 	svgCache.set(index, svg)
 	if (svgCache.size > SVG_CACHE_CAP) {
@@ -155,8 +171,18 @@ let defaultX: string | null = null
 let defaultY: string | null = null
 
 const cardName = (item: Entry) =>
-	(slots[0] && item.props[slots[0]]) || (reinventMode ? '' : item.id) || item.smiles
-const cardValue = (item: Entry) => (slots[1] ? (item.props[slots[1]] ?? '') : '')
+	(slots[0] && formattedDisplayValue(item, slots[0])) || (reinventMode ? '' : item.id) || item.smiles
+const cardValue = (item: Entry) => (slots[1] ? formattedDisplayValue(item, slots[1]) : '')
+
+const displayValue = (item: Entry, column: string) =>
+	column === MOLECULAR_MASS_COLUMN
+		? molecularMass.get(item.smiles, rdkitModule)
+		: (item.props[column] ?? '')
+
+const formattedDisplayValue = (item: Entry, column: string) => {
+	const value = displayValue(item, column)
+	return value && column === MOLECULAR_MASS_COLUMN ? `${value} Da` : value
+}
 
 const setCardValue = (card: HTMLLIElement, item: Entry) => setTitledText(card, '[data-value]', cardValue(item))
 const setCardName = (card: HTMLLIElement, item: Entry) => setTitledText(card, '[data-name]', cardName(item))
@@ -186,7 +212,7 @@ const computeOrder = (): number[] => {
 	const base = items.map((_, i) => i)
 	const col = sortColumn()
 	if (!col) return base
-	const raw = (i: number) => (items[i].props[col] ?? '').trim()
+	const raw = (i: number) => displayValue(items[i], col).trim()
 	const numeric = base.every((i) => raw(i) === '' || Number.isFinite(parseFloat(raw(i))))
 	const dir = sortDir === 'desc' ? 1 : -1
 	return base.sort((a, b) => {
@@ -237,20 +263,21 @@ const updatePills = () => {
 	})
 }
 
-const populatePanel = (cols: string[]) => {
+const populatePanel = (cols: string[], includeMolecularMass = false) => {
+	const displayColumns = includeMolecularMass ? withMolecularMassColumn(cols) : cols
 	slots = [null, null]
 	sortSlot = null
 	sortDir = 'desc'
 	columnOptions.replaceChildren()
 	updateSortLabel()
 	sortBtn.disabled = true
-	hasDisplay = cols.length > 0
+	hasDisplay = displayColumns.length > 0
 	if (!hasDisplay) {
 		displayPanel.hidden = true
 		return
 	}
 	displayPanel.hidden = view === 'graphs'
-	for (const c of cols) {
+	for (const c of displayColumns) {
 		const pill = pillTemplate.content.firstElementChild!.cloneNode(true) as HTMLButtonElement
 		pill.dataset.column = c
 		pill.textContent = c
@@ -685,6 +712,7 @@ const renderInput = async (text: string) => {
 	items = []
 	activeOrder = []
 	svgCache.clear()
+	molecularMass.clear()
 	smilesStateColumn = null
 	steps = []
 	currentStepIndex = 0
@@ -722,7 +750,7 @@ const renderInput = async (text: string) => {
 	setTotals(items.length)
 	renderSummary.hidden = !reinventMode
 
-	populatePanel(parsed.columns)
+	populatePanel(parsed.columns, true)
 	setupStepSlicer()
 	setupGraphs()
 	applyView()
