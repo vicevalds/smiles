@@ -23,6 +23,7 @@ const { title, description, lang = 'en', viewTransitions = false } = Astro.props
 		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 		<link rel="manifest" href="/site.webmanifest">
 		<link rel="preload" href="/Geist%5Bwght%5D.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="stylesheet" href="/fonts.css" />
 		<title>{title}</title>
 		{viewTransitions && <ClientRouter />}
 	</head>
