@@ -1,13 +1,15 @@
 ---
 import '@/styles/global.css'
+import { ClientRouter } from 'astro:transitions'
 
 type Props = {
 	title: string
 	description: string
 	lang?: string
+	viewTransitions?: boolean
 }
 
-const { title, description, lang = 'en' } = Astro.props
+const { title, description, lang = 'en', viewTransitions = false } = Astro.props
 ---
 
 <html lang={lang}>
@@ -22,6 +24,7 @@ const { title, description, lang = 'en' } = Astro.props
 		<link rel="manifest" href="/site.webmanifest">
 		<link rel="preload" href="/Geist%5Bwght%5D.woff2" as="font" type="font/woff2" crossorigin />
 		<title>{title}</title>
+		{viewTransitions && <ClientRouter />}
 	</head>
 	<body>
 		<slot />

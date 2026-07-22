@@ -23,7 +23,7 @@ const views = [
 ]
 ---
 
-<nav aria-label="Viewer sections">
+<nav aria-label="Viewer sections" transition:name="sidebar-nav">
 	<ul class="flex flex-col gap-1">
 		{sections.map(({ page, href, label }) => (
 			<li class="flex items-baseline gap-2">

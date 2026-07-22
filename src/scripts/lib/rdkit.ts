@@ -17,6 +17,7 @@ declare global {
 }
 
 const RDKIT_DOWNLOADED_KEY = 'rdkit-downloaded'
+let sharedRDKitPromise: Promise<RDKitModule> | null = null
 
 const rdkitDownloaded = () => localStorage.getItem(RDKIT_DOWNLOADED_KEY) === '1'
 
@@ -66,11 +67,11 @@ export const createRDKitLoader = ({
 	onStatus?: (message: string) => void
 	onReady?: (module: RDKitModule) => void
 } = {}) => {
-	let promise: Promise<RDKitModule> | null = null
+	let readyNotified = false
 
 	return () => {
-		if (!promise) {
-			promise = (async () => {
+		if (!sharedRDKitPromise) {
+			sharedRDKitPromise = (async () => {
 				const firstDownload = !rdkitDownloaded()
 				const [, wasmBinary] = await Promise.all([
 					loadScript('/RDKit_minimal.js'),
@@ -79,18 +80,23 @@ export const createRDKitLoader = ({
 					}),
 				])
 				const module = await window.initRDKitModule({ wasmBinary })
-				onReady?.(module)
 				if (firstDownload) {
 					localStorage.setItem(RDKIT_DOWNLOADED_KEY, '1')
 					onStatus?.('Downloading RDKit, done.')
 				}
 				return module
 			})()
-			promise.catch(() => {
-				promise = null
+			sharedRDKitPromise.catch(() => {
+				sharedRDKitPromise = null
 			})
 		}
-		return promise
+		return sharedRDKitPromise.then((module) => {
+			if (!readyNotified) {
+				readyNotified = true
+				onReady?.(module)
+			}
+			return module
+		})
 	}
 }
 

@@ -21,6 +21,7 @@ const isReinvent = mode === 'reinvent'
 	description={isReinvent
 		? 'View and graph REINVENT output in the browser.'
 		: 'Paste or upload SMILES strings and render 2D molecule structures in the browser.'}
+	viewTransitions
 >
 	<AppShell active={mode} viewerMode={mode}>
 		<SmilesForm

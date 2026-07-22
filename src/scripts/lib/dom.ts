@@ -58,7 +58,12 @@ export const restrictToDigits = (input: HTMLInputElement) => {
 	})
 }
 
+let horizontalArrowController: AbortController | null = null
+
 export const bindHorizontalArrows = (navigate: (direction: -1 | 1) => boolean) => {
+	horizontalArrowController?.abort()
+	const controller = new AbortController()
+	horizontalArrowController = controller
 	window.addEventListener('keydown', (event) => {
 		if (
 			(event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') ||
@@ -76,5 +81,5 @@ export const bindHorizontalArrows = (navigate: (direction: -1 | 1) => boolean) =
 		) return
 		const direction = event.key === 'ArrowRight' ? 1 : -1
 		if (navigate(direction)) event.preventDefault()
-	})
+	}, { signal: controller.signal })
 }

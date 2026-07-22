@@ -1,6 +1,8 @@
-const form = document.querySelector<HTMLFormElement>('#smiles-form')
+const initializeForm = () => {
+	const form = document.querySelector<HTMLFormElement>('#smiles-form')
 
-if (form) {
+	if (!form) return
+
 	const textarea = form.querySelector<HTMLTextAreaElement>('#smiles-text')!
 	const file = form.querySelector<HTMLInputElement>('#smiles-file')!
 	const renderButton = form.querySelector<HTMLButtonElement>('#render-btn')!
@@ -37,5 +39,7 @@ if (form) {
 		form.requestSubmit(renderButton)
 	})
 }
+
+document.addEventListener('astro:page-load', initializeForm)
 
 export {}
