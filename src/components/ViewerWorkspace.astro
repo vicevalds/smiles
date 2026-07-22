@@ -27,10 +27,10 @@ const isReinvent = mode === 'reinvent'
 			slot="sidebar"
 			placeholderSmiles={isReinvent ? REINVENT_EXAMPLE : SMILES_EXAMPLE}
 			blurOnEnter={isReinvent}
-			uploadLabel={isReinvent ? 'Upload a .csv/.tsv file' : 'Upload a .smi file'}
+			uploadLabel={isReinvent ? 'Upload a .csv/.tsv file' : 'Upload a .smi/.csv/.tsv file'}
 			fileAccept={isReinvent
 				? '.csv,.tsv,text/csv,text/tab-separated-values,text/plain'
-				: '.smi'}
+				: '.smi,.csv,.tsv,text/csv,text/tab-separated-values,text/plain'}
 		/>
 
 		<TopBar

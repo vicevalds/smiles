@@ -48,12 +48,11 @@ const { show: showError, clear: clearError } = createMessageController(formError
 
 const ALLOWED_EXTENSIONS = reinventMode
 	? ['.csv', '.tsv']
-	: ['.smi']
+	: ['.smi', '.csv', '.tsv']
 
 const applyColumns = () => {
 	gallery.dataset.columns = columns.value
 	columnsValue.textContent = columns.value
-	renderGallery()
 }
 columns.addEventListener('input', applyColumns)
 
@@ -75,23 +74,19 @@ type Entry = { smiles: string; id: string; props: Record<string, string> }
 
 type Parsed = { entries: Entry[]; columns: string[]; stepColumn: string | null }
 
+const normalizedColumn = (column: string) => column.replace(/^\uFEFF/, '').trim().toLowerCase()
+
 const parseInput = (text: string): Parsed => {
 	const lines = readRows(text)
 	if (lines.length === 0) return { entries: [], columns: [], stepColumn: null }
-	if (!reinventMode) {
-		const entries = lines.map((line) => {
-			const [smiles, ...rest] = line.split(/\s+/)
-			return { smiles, id: rest.join(' '), props: {} }
-		})
-		return { entries, columns: [], stepColumn: null }
-	}
 
 	const delimiter = lines[0].includes('\t') ? '\t' : ','
 	const header = parseDelimitedLine(lines[0], delimiter)
-	const lower = header.map((h) => h.toLowerCase())
-	const isCsv = header.length > 1 && lower.includes('smiles')
+	const lower = header.map(normalizedColumn)
+	const smilesIdx = lower.indexOf('smiles')
+	const isTabular = smilesIdx !== -1
 
-	if (!isCsv) {
+	if (!isTabular) {
 		const entries = lines.map((line) => {
 			const [smiles, ...rest] = line.split(/\s+/)
 			return { smiles, id: rest.join(' '), props: {} }
@@ -99,14 +94,11 @@ const parseInput = (text: string): Parsed => {
 		return { entries, columns: [], stepColumn: null }
 	}
 
-	const smilesIdx = lower.indexOf('smiles')
 	const idIdx = lower.indexOf('id')
-
-	const stepIdx = lower.indexOf('step')
+	const stepIdx = reinventMode ? lower.indexOf('step') : -1
 	const stepColumn = stepIdx === -1 ? null : header[stepIdx]
 	const propIdx = header.map((_, i) => i).filter((i) => i !== smilesIdx)
-	const hiddenIdx = new Set([stepIdx])
-	const columns = propIdx.filter((i) => !hiddenIdx.has(i)).map((i) => header[i])
+	const columns = propIdx.filter((i) => i !== stepIdx).map((i) => header[i])
 
 	const entries: Entry[] = []
 	for (let r = 1; r < lines.length; r++) {
@@ -123,33 +115,34 @@ const parseInput = (text: string): Parsed => {
 let items: Entry[] = []
 
 let rdkitModule: RDKitModule | null = null
-const svgCache = new Map<number, string>()
+const svgCache = new Map<string, string>()
 const molecularMass = new MolecularMassResolver()
 const SVG_CACHE_CAP = 800
 const generateSvg = (index: number): string => {
-	const cached = svgCache.get(index)
+	const smiles = items[index].smiles
+	const cached = svgCache.get(smiles)
 	if (cached !== undefined) {
-		svgCache.delete(index)
-		svgCache.set(index, cached)
+		svgCache.delete(smiles)
+		svgCache.set(smiles, cached)
 		return cached
 	}
 	let svg = ''
 	if (rdkitModule) {
-		const mol = rdkitModule.get_mol(items[index].smiles)
+		const mol = rdkitModule.get_mol(smiles)
 		try {
 			if (mol?.is_valid()) {
 				svg = mol.get_svg(300, 300)
 				try {
-					molecularMass.cacheDescriptors(items[index].smiles, mol.get_descriptors())
+					molecularMass.cacheDescriptors(smiles, mol.get_descriptors())
 				} catch {
-					molecularMass.cacheDescriptors(items[index].smiles, '')
+					molecularMass.cacheDescriptors(smiles, '')
 				}
-			}
+			} else molecularMass.cacheDescriptors(smiles, '')
 		} finally {
 			mol?.delete()
 		}
 	}
-	svgCache.set(index, svg)
+	svgCache.set(smiles, svg)
 	if (svgCache.size > SVG_CACHE_CAP) {
 		const oldest = svgCache.keys().next().value
 		if (oldest !== undefined) svgCache.delete(oldest)
@@ -170,39 +163,138 @@ let graphColumns: string[] = []
 let defaultX: string | null = null
 let defaultY: string | null = null
 
-const cardName = (item: Entry) =>
-	(slots[0] && formattedDisplayValue(item, slots[0])) || (reinventMode ? '' : item.id) || item.smiles
-const cardValue = (item: Entry) => (slots[1] ? formattedDisplayValue(item, slots[1]) : '')
+const cardName = (item: Entry, resolveComputed = true) =>
+	(slots[0] && formattedDisplayValue(item, slots[0], resolveComputed)) ||
+	(reinventMode ? '' : item.id) ||
+	item.smiles
+const cardValue = (item: Entry, resolveComputed = true) =>
+	slots[1] ? formattedDisplayValue(item, slots[1], resolveComputed) : ''
 
-const displayValue = (item: Entry, column: string) =>
+const displayValue = (item: Entry, column: string, resolveComputed = true) =>
 	column === MOLECULAR_MASS_COLUMN
-		? molecularMass.get(item.smiles, rdkitModule)
+		? (resolveComputed ? molecularMass.get(item.smiles, rdkitModule) : '')
 		: (item.props[column] ?? '')
 
-const formattedDisplayValue = (item: Entry, column: string) => {
-	const value = displayValue(item, column)
+const formattedDisplayValue = (item: Entry, column: string, resolveComputed = true) => {
+	const value = displayValue(item, column, resolveComputed)
 	return value && column === MOLECULAR_MASS_COLUMN ? `${value} Da` : value
 }
 
-const setCardValue = (card: HTMLLIElement, item: Entry) => setTitledText(card, '[data-value]', cardValue(item))
-const setCardName = (card: HTMLLIElement, item: Entry) => setTitledText(card, '[data-name]', cardName(item))
+const setCardValue = (card: HTMLLIElement, item: Entry, resolveComputed = true) =>
+	setTitledText(card, '[data-value]', cardValue(item, resolveComputed))
+const setCardName = (card: HTMLLIElement, item: Entry, resolveComputed = true) =>
+	setTitledText(card, '[data-name]', cardName(item, resolveComputed))
 
 const buildCard = (index: number) => {
 	const item = items[index]
 	const card = cardTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement
-	const svg = generateSvg(index)
+	card.style.contentVisibility = 'auto'
+	card.style.containIntrinsicSize = 'auto 260px'
+	card.setAttribute('aria-busy', 'true')
 	const svgEl = card.querySelector<HTMLElement>('[data-svg]')
-	if (svgEl && svg) svgEl.innerHTML = svg
+	if (svgEl) {
+		svgEl.replaceChildren()
+		svgEl.classList.add('animate-pulse', 'bg-gray-50')
+		svgEl.setAttribute('aria-label', 'Molecule rendering pending')
+	}
+	card.dataset.itemIndex = String(index)
+	card.dataset.lazy = 'true'
 	const copyButton = card.querySelector<HTMLButtonElement>('[data-copy-smiles]')
 	if (copyButton) {
 		copyButton.hidden = false
 		copyButton.dataset.smiles = item.smiles
 		copyButton.setAttribute('aria-label', 'Copy SMILES')
 	}
-	setCardName(card, item)
-	setCardValue(card, item)
+	setCardName(card, item, false)
+	setCardValue(card, item, false)
 	return card
 }
+
+type LazyCard = { card: HTMLLIElement; index: number; version: number }
+
+let galleryVersion = 0
+let lazyCards: LazyCard[] = []
+let lazyFlushScheduled = false
+
+const distanceFromViewport = ({ card }: LazyCard) => {
+	const rect = card.getBoundingClientRect()
+	if (rect.bottom < 0) return -rect.bottom
+	if (rect.top > window.innerHeight) return rect.top - window.innerHeight
+	return 0
+}
+
+const hydrateCard = ({ card, index, version }: LazyCard) => {
+	if (version !== galleryVersion || !card.isConnected) return
+	const svgEl = card.querySelector<HTMLElement>('[data-svg]')
+	if (!svgEl) return
+
+	const svg = generateSvg(index)
+	setCardName(card, items[index])
+	setCardValue(card, items[index])
+	svgEl.classList.remove('animate-pulse', 'bg-gray-50')
+	svgEl.removeAttribute('aria-label')
+	if (svg) svgEl.innerHTML = svg
+	else {
+		const fallback = document.createElement('span')
+		fallback.className = 'text-2xl'
+		fallback.textContent = ';('
+		svgEl.replaceChildren(fallback)
+	}
+	card.removeAttribute('aria-busy')
+	delete card.dataset.lazy
+	delete card.dataset.queued
+}
+
+const flushLazyCards = (deadline?: IdleDeadline) => {
+	lazyFlushScheduled = false
+	const started = performance.now()
+	let rendered = 0
+
+	while (lazyCards.length > 0) {
+		if (cardObserver) {
+			lazyCards.sort((a, b) => distanceFromViewport(a) - distanceFromViewport(b))
+		}
+		const next = lazyCards.shift()!
+		hydrateCard(next)
+		rendered++
+
+		if (
+			rendered >= 3 ||
+			performance.now() - started >= 18 ||
+			(deadline && !deadline.didTimeout && deadline.timeRemaining() < 3)
+		) break
+	}
+
+	if (lazyCards.length > 0) scheduleLazyFlush()
+}
+
+const scheduleLazyFlush = () => {
+	if (lazyFlushScheduled) return
+	lazyFlushScheduled = true
+	if (window.requestIdleCallback) {
+		window.requestIdleCallback(flushLazyCards, { timeout: 80 })
+	} else window.setTimeout(() => flushLazyCards(), 16)
+}
+
+const enqueueCard = (card: HTMLLIElement) => {
+	if (card.dataset.queued === 'true' || card.dataset.lazy !== 'true') return
+	const index = Number(card.dataset.itemIndex)
+	if (!Number.isInteger(index)) return
+	card.dataset.queued = 'true'
+	lazyCards.push({ card, index, version: galleryVersion })
+	scheduleLazyFlush()
+}
+
+const cardObserver = typeof IntersectionObserver === 'undefined'
+	? null
+	: new IntersectionObserver((entries, observer) => {
+		for (const entry of entries) {
+			if (!entry.isIntersecting) continue
+			const card = entry.target as HTMLLIElement
+			observer.unobserve(card)
+			enqueueCard(card)
+		}
+	}, { rootMargin: '700px 0px' })
 
 gallery.addEventListener('click', createCopyHandler())
 
@@ -233,9 +325,21 @@ const hasValidSmilesState = (i: number) =>
 	!!smilesStateColumn && (items[i].props[smilesStateColumn] ?? '').trim() === '1'
 
 const renderGallery = () => {
+	galleryVersion++
+	lazyCards = []
+	cardObserver?.disconnect()
 	const fragment = document.createDocumentFragment()
-	for (const index of activeOrder) fragment.append(buildCard(index))
+	const cards: HTMLLIElement[] = []
+	for (const index of activeOrder) {
+		const card = buildCard(index)
+		cards.push(card)
+		fragment.append(card)
+	}
 	gallery.replaceChildren(fragment)
+	for (const card of cards) {
+		if (cardObserver) cardObserver.observe(card)
+		else enqueueCard(card)
+	}
 }
 
 const recompute = () => {
