@@ -760,7 +760,9 @@ const initializeViewer = () => {
 			const pill = pillTemplate.content.firstElementChild!.cloneNode(true) as HTMLButtonElement
 			pill.dataset.column = c
 			pill.textContent = c
-			if (c === selected) pill.dataset.slot = '0'
+			const isSelected = c === selected
+			if (isSelected) pill.dataset.slot = '0'
+			pill.setAttribute('aria-pressed', String(isSelected))
 			group.append(pill)
 		}
 	}
@@ -819,8 +821,14 @@ const initializeViewer = () => {
 		if (pill) {
 			const group = pill.closest<HTMLElement>('[data-x-axis], [data-y-axis]')!
 			const wasSelected = pill.dataset.slot !== undefined
-			group.querySelectorAll<HTMLElement>('[data-column]').forEach((p) => delete p.dataset.slot)
-			if (!wasSelected) pill.dataset.slot = '0'
+			group.querySelectorAll<HTMLElement>('[data-column]').forEach((p) => {
+				delete p.dataset.slot
+				p.setAttribute('aria-pressed', 'false')
+			})
+			if (!wasSelected) {
+				pill.dataset.slot = '0'
+				pill.setAttribute('aria-pressed', 'true')
+			}
 			refreshCreateBtn(pill.closest<HTMLElement>('[data-creator]')!)
 			return
 		}
