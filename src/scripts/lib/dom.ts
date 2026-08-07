@@ -11,6 +11,13 @@ export const setTitledText = (root: ParentNode, selector: string, text: string) 
 	element.title = text
 }
 
+const CARD_TEXT_SELECTORS = ['[data-name]', '[data-value]', '[data-extra-name]', '[data-extra-value]']
+
+export const setCardText = (root: ParentNode, values: string[], titled = false) => {
+	const setter = titled ? setTitledText : setText
+	CARD_TEXT_SELECTORS.forEach((selector, index) => setter(root, selector, values[index] ?? ''))
+}
+
 export const createMessageController = (element: HTMLElement) => ({
 	show(message: string) {
 		element.textContent = message

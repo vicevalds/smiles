@@ -1,7 +1,8 @@
 import { parseDelimitedLine, readRows } from './lib/csv'
 import { formatMB, isAllowedFile, MAX_FILE_SIZE, readTextInput } from './lib/files'
 import { createRDKitLoader, requestIdle, type RDKitModule } from './lib/rdkit'
-import { bindHorizontalArrows, createCopyHandler, createMessageController, restrictToDigits, setText } from './lib/dom'
+import { bindHorizontalArrows, createCopyHandler, createMessageController, restrictToDigits, setCardText } from './lib/dom'
+import { bindNumericFilter } from './lib/numeric-filter'
 import { createStatusController } from './lib/status'
 import {
 	MOLECULAR_MASS_COLUMN,
@@ -12,15 +13,6 @@ import {
 type SortMode = 'desc' | 'asc'
 type ActiveSort = 'similarity' | 'value'
 type CardVariant = 'neighbor' | 'query' | 'cutoff'
-type NumericFilterOperator = '>' | '<' | '='
-
-type NumericFilterControl = {
-	element: HTMLElement
-	readonly enabled: boolean
-	matches: (candidate: number) => boolean
-	disable: () => void
-	reset: (value?: number | null) => void
-}
 
 type Neighbor = {
 	queryName: string
@@ -71,131 +63,14 @@ const initializeNNViewer = () => {
 	const cardTemplate = document.querySelector<HTMLTemplateElement>('#card-template')!
 
 	const ALLOWED_EXTENSIONS = ['.csv', '.tsv']
-	const numericFilterOperatorCycle: NumericFilterOperator[] = ['>', '<', '=']
-
-	const createNumericFilterControl = (
-		id: string,
-		onChange: () => void,
-	): NumericFilterControl => {
-		const element = document.querySelector<HTMLElement>(`#${id}`)!
-		const operatorButton = document.querySelector<HTMLButtonElement>(`#${id}-operator`)!
-		const input = document.querySelector<HTMLInputElement>(`#${id}-input`)!
-		const toggleButton = document.querySelector<HTMLButtonElement>(`#${id}-toggle`)!
-		const ariaLabel = operatorButton.getAttribute('aria-label')?.split(' comparison:')[0] ?? id
-		let operator: NumericFilterOperator = '>'
-		let enabled = false
-		const initialValue = input.value.trim() ? Number(input.value) : Number.NaN
-		let value: number | null = Number.isFinite(initialValue) ? initialValue : null
-
-		const updateControls = () => {
-			operatorButton.textContent = operator
-			operatorButton.setAttribute(
-				'aria-label',
-				`${ariaLabel} comparison: ${operator === '>' ? 'greater than' : operator === '<' ? 'less than' : 'equal to'}`,
-			)
-			toggleButton.textContent = enabled ? 'On' : 'Off'
-			toggleButton.setAttribute('aria-pressed', String(enabled))
-		}
-
-		const parseInput = () => {
-			const rawValue = input.value.trim()
-			if (!rawValue) return null
-			const parsed = Number(rawValue)
-			const min = input.min === '' ? null : Number(input.min)
-			return Number.isFinite(parsed) && (min === null || parsed >= min) ? parsed : null
-		}
-
-		const commitInput = () => {
-			const parsed = parseInput()
-			if (parsed === null) {
-				input.value = value === null ? '' : String(value)
-				return false
-			}
-			value = parsed
-			input.value = String(parsed)
-			return true
-		}
-
-		const setEnabled = (nextEnabled: boolean) => {
-			enabled = nextEnabled && value !== null
-			updateControls()
-		}
-
-		const commitAndApply = (enableAfterCommit = false) => {
-			const wasEnabled = enabled
-			const committed = commitInput()
-			if (!committed && enabled) setEnabled(false)
-			if (committed && enableAfterCommit) {
-				setEnabled(true)
-				toggleButton.focus()
-			}
-			if (committed || wasEnabled) onChange()
-		}
-
-		operatorButton.addEventListener('click', () => {
-			const index = numericFilterOperatorCycle.indexOf(operator)
-			operator = numericFilterOperatorCycle[(index + 1) % numericFilterOperatorCycle.length]
-			updateControls()
-			onChange()
-		})
-
-		input.addEventListener('keydown', (event) => {
-			if (event.key === '-' && input.min !== '' && Number(input.min) >= 0) {
-				event.preventDefault()
-				return
-			}
-			if (event.key !== 'Enter') return
-			event.preventDefault()
-			commitAndApply(true)
-		})
-		input.addEventListener('input', () => {
-			const min = input.min === '' ? null : Number(input.min)
-			const parsed = Number(input.value)
-			if (input.value && min !== null && Number.isFinite(parsed) && parsed < min) {
-				input.value = String(min)
-			}
-		})
-		input.addEventListener('change', () => commitAndApply())
-
-		toggleButton.addEventListener('click', () => {
-			const nextEnabled = !enabled
-			if (nextEnabled && !commitInput()) {
-				input.focus()
-				return
-			}
-			setEnabled(nextEnabled)
-			onChange()
-		})
-
-		updateControls()
-		return {
-			element,
-			get enabled() {
-				return enabled
-			},
-			matches(candidate) {
-				if (value === null || !Number.isFinite(candidate)) return false
-				if (operator === '>') return candidate > value
-				if (operator === '<') return candidate < value
-				return candidate === value
-			},
-			disable() {
-				setEnabled(false)
-			},
-			reset(nextValue = null) {
-				operator = '>'
-				value = nextValue
-				input.value = nextValue === null ? '' : String(nextValue)
-				setEnabled(false)
-			},
-		}
-	}
-
-	const similarityFilterControl = createNumericFilterControl(
-		'similarity-cutoff',
+	const similarityFilterControl = bindNumericFilter(
+		document.querySelector<HTMLElement>('#similarity-cutoff')!,
 		() => renderCurrentQuery(),
 	)
-	const valueFilterControl = createNumericFilterControl('value-filter', () => renderCurrentQuery())
+	const valueFilterControl = bindNumericFilter(
+		document.querySelector<HTMLElement>('#value-filter')!,
+		() => renderCurrentQuery(),
+	)
 
 	let rdkitModule: RDKitModule | null = null
 	let queryGroups: QueryGroup[] = []
@@ -210,7 +85,7 @@ const initializeNNViewer = () => {
 	let activeRanks = new Map<Neighbor, number>()
 	let svgRenderToken = 0
 	let displayColumns: string[] = []
-	let selectedDisplayColumn: string | null = null
+	let selectedDisplayColumns: string[] = []
 	const { show: showStatus, clear: clearStatus } = createStatusController(formStatus)
 	const { show: showError, clear: clearError } = createMessageController(formError)
 
@@ -402,6 +277,7 @@ const initializeNNViewer = () => {
 		rank?: number | string,
 		renderSvg = true,
 		variant: CardVariant = 'query',
+		extraRow?: [string, string],
 	) => {
 		const card = cardTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement
 		setCardVariant(card, variant)
@@ -410,8 +286,8 @@ const initializeNNViewer = () => {
 			const svg = generateSvg(smiles)
 			if (svgSlot && svg) svgSlot.innerHTML = svg
 		}
-		setText(card, '[data-name]', name)
-		setText(card, '[data-value]', value)
+		setCardText(card, [name, value, ...(extraRow ?? [])])
+		if (extraRow) card.dataset.displayRows = '2'
 		if (rank !== undefined) revealCardControl(card, '[data-rank]', `#${rank}`)
 		const copyButton = card.querySelector<HTMLButtonElement>('[data-copy-smiles]')
 		if (copyButton) {
@@ -446,20 +322,28 @@ const initializeNNViewer = () => {
 		requestAnimationFrame(renderBatch)
 	}
 
-	const selectedDisplayValue = (neighbor: Neighbor) => {
-		if (selectedDisplayColumn === MOLECULAR_MASS_COLUMN) {
+	const displayColumnValue = (neighbor: Neighbor, column: string | null) => {
+		if (column === MOLECULAR_MASS_COLUMN) {
 			return molecularMass.get(neighbor.compoundSmiles, rdkitModule)
 		}
-		return selectedDisplayColumn ? (neighbor.props[selectedDisplayColumn] ?? '') : ''
+		return column ? (neighbor.props[column] ?? '') : ''
 	}
 
-	const formatSelectedDisplayValue = (neighbor: Neighbor) => {
-		const value = selectedDisplayValue(neighbor)
-		return value && selectedDisplayColumn === MOLECULAR_MASS_COLUMN ? `${value} Da` : value
+	const formatDisplayColumnValue = (neighbor: Neighbor, column: string | null) => {
+		const value = displayColumnValue(neighbor, column)
+		return value && column === MOLECULAR_MASS_COLUMN ? `${value} Da` : value
 	}
+
+	const primaryDisplayColumn = () => selectedDisplayColumns[0] ?? null
+
+	const selectedDisplayValue = (neighbor: Neighbor) =>
+		displayColumnValue(neighbor, primaryDisplayColumn())
+
+	const formatSelectedDisplayValue = (neighbor: Neighbor) =>
+		formatDisplayColumnValue(neighbor, primaryDisplayColumn())
 
 	const selectedQueryDisplayValue = (group: QueryGroup) => {
-		if (selectedDisplayColumn !== MOLECULAR_MASS_COLUMN) return group.name
+		if (primaryDisplayColumn() !== MOLECULAR_MASS_COLUMN) return group.name
 		return molecularMass.format(group.smiles, rdkitModule)
 	}
 
@@ -481,7 +365,7 @@ const initializeNNViewer = () => {
 
 	const visibleNeighbors = (group: QueryGroup) => {
 		let rows = group.neighbors.filter(matchesActiveFilters)
-		if (activeSort === 'value' && selectedDisplayColumn) {
+		if (activeSort === 'value' && primaryDisplayColumn()) {
 			const dir = valueSortMode === 'desc' ? -1 : 1
 			rows = [...rows].sort((a, b) => {
 				const av = Number.parseFloat(selectedDisplayValue(a))
@@ -525,25 +409,26 @@ const initializeNNViewer = () => {
 
 	const updateSortLabel = () => {
 		sortBtn.textContent = `Similarity ${sortMode === 'desc' ? '↓' : '↑'}`
-		valueSortBtn.textContent = `Value ${selectedDisplayColumn === null ? '-' : valueSortMode === 'desc' ? '↓' : '↑'}`
+		valueSortBtn.textContent = `Value ${primaryDisplayColumn() === null ? '-' : valueSortMode === 'desc' ? '↓' : '↑'}`
 		sortBtn.setAttribute('aria-pressed', String(activeSort === 'similarity'))
 		valueSortBtn.setAttribute('aria-pressed', String(activeSort === 'value'))
 	}
 
 	const updateDisplayPills = () => {
 		columnOptions.querySelectorAll<HTMLButtonElement>('[data-column]').forEach((pill) => {
-			const isActive = pill.dataset.column === selectedDisplayColumn
-			if (isActive) pill.dataset.slot = '0'
+			const slot = selectedDisplayColumns.indexOf(pill.dataset.column ?? '')
+			if (slot !== -1) pill.dataset.slot = String(slot === 0 ? 0 : slot + 1)
 			else delete pill.dataset.slot
-			pill.setAttribute('aria-pressed', String(isActive))
+			pill.setAttribute('aria-pressed', String(slot !== -1))
 		})
 	}
 
 	const populateDisplayPanel = (columns: string[]) => {
 		displayColumns = withMolecularMassColumn(columns)
-		selectedDisplayColumn = displayColumns.includes(selectedDisplayColumn ?? '')
-			? selectedDisplayColumn
-			: MOLECULAR_MASS_COLUMN
+		selectedDisplayColumns = selectedDisplayColumns.filter((column) =>
+			displayColumns.includes(column)
+		).slice(0, 3)
+		if (selectedDisplayColumns.length === 0) selectedDisplayColumns.push(MOLECULAR_MASS_COLUMN)
 		columnOptions.replaceChildren()
 		displayPanel.hidden = false
 		for (const column of displayColumns) {
@@ -618,6 +503,12 @@ const initializeNNViewer = () => {
 		const fragment = document.createDocumentFragment()
 		const cards: HTMLLIElement[] = []
 		for (const neighbor of activeNeighbors) {
+			const extraRow: [string, string] | undefined = selectedDisplayColumns[1]
+				? [
+					formatDisplayColumnValue(neighbor, selectedDisplayColumns[1]),
+					formatDisplayColumnValue(neighbor, selectedDisplayColumns[2] ?? null),
+				]
+				: undefined
 			const card = buildCard(
 				neighbor.compoundSmiles,
 				formatSelectedDisplayValue(neighbor),
@@ -625,6 +516,7 @@ const initializeNNViewer = () => {
 				activeRanks.get(neighbor),
 				false,
 				cardVariant(neighbor),
+				extraRow,
 			)
 			cards.push(card)
 			fragment.append(card)
@@ -664,7 +556,7 @@ const initializeNNViewer = () => {
 		sortMode = 'desc'
 		valueSortMode = 'desc'
 		activeSort = 'similarity'
-		selectedDisplayColumn = MOLECULAR_MASS_COLUMN
+		selectedDisplayColumns = [MOLECULAR_MASS_COLUMN]
 		valueFilterControl.reset()
 		populateDisplayPanel(displayColumns)
 		updateSortLabel()
@@ -722,11 +614,14 @@ const initializeNNViewer = () => {
 	columnOptions.addEventListener('click', (event) => {
 		const pill = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-column]')
 		if (!pill?.dataset.column) return
-		const nextColumn = pill.dataset.column === selectedDisplayColumn ? null : pill.dataset.column
+		const selectedIndex = selectedDisplayColumns.indexOf(pill.dataset.column)
+		if (selectedIndex === -1) {
+			if (selectedDisplayColumns.length === 3) return
+			selectedDisplayColumns.push(pill.dataset.column)
+		} else selectedDisplayColumns.splice(selectedIndex, 1)
 		valueFilterControl.disable()
-		selectedDisplayColumn = nextColumn
 		valueSortMode = 'desc'
-		activeSort = nextColumn === null ? 'similarity' : 'value'
+		activeSort = primaryDisplayColumn() === null ? 'similarity' : 'value'
 		updateDisplayPills()
 		updateSortLabel()
 		renderCurrentQuery()
@@ -768,7 +663,7 @@ const initializeNNViewer = () => {
 	})
 
 	valueSortBtn.addEventListener('click', () => {
-		if (!selectedDisplayColumn) return
+		if (!primaryDisplayColumn()) return
 		valueSortMode = valueSortMode === 'desc' ? 'asc' : 'desc'
 		activeSort = 'value'
 		updateSortLabel()

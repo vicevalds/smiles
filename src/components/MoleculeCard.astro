@@ -8,6 +8,7 @@ interface Props {
 	figureClass?: string
 	imageClass?: string
 	captionClass?: string
+	virtualized?: boolean
 }
 
 const {
@@ -17,6 +18,7 @@ const {
 	figureClass = '',
 	imageClass = '',
 	captionClass = '',
+	virtualized = false,
 } = Astro.props
 ---
 
@@ -24,6 +26,7 @@ const {
 	<li
 		class:list={[
 			'group flex flex-col overflow-hidden border-2 data-[variant=cutoff]:border-accent data-[variant=query]:border-accent-2',
+			virtualized && 'molecule-card',
 			borderColorClass,
 			cardClass,
 		]}
@@ -43,14 +46,31 @@ const {
 			</div>
 			<figcaption
 				class:list={[
-					'flex h-9 items-center gap-2 border-t p-2 font-mono text-xs group-data-[variant=cutoff]:border-accent group-data-[variant=query]:border-accent-2',
+					"h-9 border-t font-mono text-xs group-data-[display-rows='2']:h-18 group-data-[variant=cutoff]:border-accent group-data-[variant=query]:border-accent-2",
 					borderColorClass,
 					captionClass,
 				]}
 			>
-				<span data-name class="min-w-0 flex-1 truncate"></span>
-				<span data-value class="shrink-0 tabular-nums text-gray-600"></span>
+				<div class="flex h-[35px] items-center gap-2 px-2 group-data-[display-rows='2']:translate-y-1">
+					<span data-name class="min-w-0 flex-1 truncate"></span>
+					<span data-value class="shrink-0 tabular-nums text-gray-600"></span>
+				</div>
+				<div class="hidden h-9 items-center gap-2 px-2 group-data-[display-rows='2']:-translate-y-1 group-data-[display-rows='2']:flex">
+					<span data-extra-name class="min-w-0 flex-1 truncate"></span>
+					<span data-extra-value class="shrink-0 tabular-nums text-gray-600"></span>
+				</div>
 			</figcaption>
 		</figure>
 	</li>
 </template>
+
+<style>
+	.molecule-card {
+		content-visibility: auto;
+		contain-intrinsic-size: auto 260px;
+	}
+
+	.molecule-card[data-display-rows='2'] {
+		contain-intrinsic-size: auto 296px;
+	}
+</style>

@@ -1,6 +1,7 @@
 ---
 import AppShell from '@/components/AppShell.astro'
 import BaseLayout from '@/layouts/BaseLayout.astro'
+import ColumnFilters from '@/components/ColumnFilters.astro'
 import GraphTemplates from '@/components/GraphTemplates.astro'
 import MoleculeCard from '@/components/MoleculeCard.astro'
 import Slicer from '@/components/Slicer.astro'
@@ -32,12 +33,13 @@ const isReinvent = mode === 'reinvent'
 			fileAccept={isReinvent
 				? '.csv,.tsv,text/csv,text/tab-separated-values,text/plain'
 				: '.smi,.csv,.tsv,text/csv,text/tab-separated-values,text/plain'}
-		/>
+		>
+			{!isReinvent && <ColumnFilters slot="form-options" />}
+		</SmilesForm>
 
 		<TopBar
 			summaryLabel="Molecules"
 			totalLabel="Molecules"
-			sticky={!isReinvent}
 			controlsFirst={isReinvent}
 		>
 			<Slicer
@@ -49,12 +51,21 @@ const isReinvent = mode === 'reinvent'
 			/>
 		</TopBar>
 
-		<section id="gallery-section" aria-labelledby="gallery-title" class="pl-4">
+		<section
+			id="gallery-section"
+			aria-labelledby="gallery-title"
+			data-gallery-rows={!isReinvent ? '3' : undefined}
+			class="pl-4"
+		>
 			<h1 id="gallery-title" class="sr-only">Rendered molecules</h1>
 			<ul
 				id="gallery"
 				data-columns="5"
-				class="grid gap-4 data-[columns='2']:grid-cols-2 data-[columns='3']:grid-cols-3 data-[columns='4']:grid-cols-4 data-[columns='5']:grid-cols-5 data-[columns='6']:grid-cols-6 data-[columns='7']:grid-cols-7 data-[columns='8']:grid-cols-8"
+				data-card-rows="1"
+				class:list={[
+					"grid gap-4 pr-4 data-[columns='2']:grid-cols-2 data-[columns='3']:grid-cols-3 data-[columns='4']:grid-cols-4 data-[columns='5']:grid-cols-5 data-[columns='6']:grid-cols-6 data-[columns='7']:grid-cols-7 data-[columns='8']:grid-cols-8",
+					!isReinvent && 'scrollbar-hover overflow-y-auto',
+				]}
 			></ul>
 		</section>
 
@@ -65,9 +76,29 @@ const isReinvent = mode === 'reinvent'
 			</section>
 		)}
 
-		<MoleculeCard />
+		<MoleculeCard virtualized />
 		{isReinvent && <GraphTemplates />}
 	</AppShell>
 
 	<script src="@/scripts/viewer.ts"></script>
 </BaseLayout>
+
+<style>
+	#gallery-section[data-gallery-rows] {
+		--visible-row-count: attr(data-gallery-rows type(<number>), 3);
+		container-type: inline-size;
+	}
+
+	#gallery-section[data-gallery-rows] #gallery {
+		--column-count: attr(data-columns type(<number>), 5);
+		--card-row-count: attr(data-card-rows type(<number>), 1);
+		--caption-height: calc(2.25rem * var(--card-row-count));
+		--card-width: calc((100cqw - (var(--column-count) - 1) * 1rem) / var(--column-count));
+		inline-size: calc(100% + 0.5rem);
+		max-height: calc(
+			(var(--card-width) + var(--caption-height)) * var(--visible-row-count) +
+			(var(--visible-row-count) - 1) * 1rem
+		);
+		scrollbar-gutter: stable;
+	}
+</style>

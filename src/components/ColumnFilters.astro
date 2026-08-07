@@ -1,0 +1,22 @@
+---
+import NumericFilterFields from '@/components/NumericFilterFields.astro'
+---
+
+<div id="column-filters" class="flex flex-col gap-2" hidden>
+	<span class="font-semibold">Filters</span>
+	<div id="column-filter-list" class="flex flex-col gap-2"></div>
+	<template id="column-filter-template">
+		<section class="flex h-[26px] items-center gap-2">
+			<select
+				data-filter-column
+				aria-label="Filter column"
+				class="h-full w-32 shrink-0 cursor-pointer border-0 border-b-2 border-accent bg-transparent px-1 font-semibold text-black focus:border-gray-400 focus:outline-none"
+			>
+				<option value=""></option>
+			</select>
+			<div class="flex h-full min-w-0 flex-1 flex-nowrap items-center gap-1">
+				<NumericFilterFields disabled />
+			</div>
+		</section>
+	</template>
+</div>

@@ -1,0 +1,50 @@
+---
+import PillButton from '@/components/PillButton.astro'
+
+interface Props {
+	label?: string
+	defaultValue?: string
+	placeholder?: string
+	min?: number
+	disabled?: boolean
+}
+
+const {
+	label = 'Filter',
+	defaultValue,
+	placeholder = '0.0',
+	min,
+	disabled = false,
+} = Astro.props
+---
+
+<PillButton
+	data-filter-operator
+	aria-label={`${label} comparison: greater than`}
+	grow={false}
+	padded={false}
+	class="w-12 shrink-0 disabled:cursor-not-allowed disabled:text-gray-400"
+	{disabled}
+>&gt;</PillButton>
+<input
+	data-filter-input
+	type="number"
+	inputmode="decimal"
+	step="any"
+	{min}
+	value={defaultValue}
+	{placeholder}
+	aria-label={`${label} value`}
+	class="h-full w-16 shrink-0 appearance-none border-0 border-b-2 border-accent bg-transparent p-0 text-right font-semibold tabular-nums text-black disabled:cursor-not-allowed disabled:text-gray-400
+		[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none
+		focus:border-gray-400 focus:outline-none"
+	{disabled}
+/>
+<PillButton
+	data-filter-toggle
+	aria-pressed="false"
+	grow={false}
+	padded={false}
+	class="w-16 shrink-0 disabled:cursor-not-allowed disabled:text-gray-400"
+	{disabled}
+>Off</PillButton>
