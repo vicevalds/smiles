@@ -1,23 +1,31 @@
 ---
 import type { HTMLAttributes } from 'astro/types'
 
-interface Props extends HTMLAttributes<'button'> {}
+interface Props extends HTMLAttributes<'button'> {
+	idleText?: string
+	copiedText?: string
+}
 
 const {
 	class: className,
 	type = 'button',
+	idleText = 'Copy',
+	copiedText = 'Copied',
 	...attributes
 } = Astro.props
 ---
 
 <button
 	{...attributes}
-	data-copy-smiles
+	data-copy-button
+	data-copy-idle-text={idleText}
+	data-copy-success-text={copiedText}
 	type={type}
 	class:list={[
 		'cursor-pointer border border-accent-2 bg-white px-1 font-sans text-[10px] leading-4 text-black hover:bg-accent-2',
 		className,
 	]}
+	aria-live="polite"
 >
-	<slot>Copy</slot>
+	<slot>{idleText}</slot>
 </button>

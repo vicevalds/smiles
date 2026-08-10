@@ -1,7 +1,7 @@
 import { parseDelimitedLine, readRows } from './lib/csv'
 import { formatMB, isAllowedFile, MAX_FILE_SIZE, readTextInput } from './lib/files'
 import { createRDKitLoader, requestIdle, type RDKitModule } from './lib/rdkit'
-import { bindHorizontalArrows, createCopyHandler, createMessageController, restrictToDigits, setCardText } from './lib/dom'
+import { bindHorizontalArrows, createCopyHandler, createMessageController, restrictToDigits, setCardText, setCopyButton } from './lib/dom'
 import { bindNumericFilter } from './lib/numeric-filter'
 import { createStatusController } from './lib/status'
 import {
@@ -289,12 +289,7 @@ const initializeNNViewer = () => {
 		setCardText(card, [name, value, ...(extraRow ?? [])])
 		if (extraRow) card.dataset.displayRows = '2'
 		if (rank !== undefined) revealCardControl(card, '[data-rank]', `#${rank}`)
-		const copyButton = card.querySelector<HTMLButtonElement>('[data-copy-smiles]')
-		if (copyButton) {
-			copyButton.hidden = false
-			copyButton.dataset.smiles = smiles
-			copyButton.setAttribute('aria-label', 'Copy SMILES')
-		}
+		setCopyButton(card, '[data-copy-smiles]', smiles, 'Copy SMILES')
 		card.dataset.smiles = smiles
 		return card
 	}

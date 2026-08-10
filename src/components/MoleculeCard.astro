@@ -9,6 +9,7 @@ interface Props {
 	imageClass?: string
 	captionClass?: string
 	virtualized?: boolean
+	copyId?: boolean
 }
 
 const {
@@ -19,6 +20,7 @@ const {
 	imageClass = '',
 	captionClass = '',
 	virtualized = false,
+	copyId = false,
 } = Astro.props
 ---
 
@@ -33,16 +35,25 @@ const {
 	>
 		<figure class:list={['flex flex-col', figureClass]}>
 			<div class:list={['relative aspect-square', imageClass]}>
+				{copyId && (
+					<CopyButton
+						data-copy-id
+						idleText="ID"
+						copiedText="ID copied"
+						class="absolute left-1 top-1 z-10"
+						hidden
+					/>
+				)}
 				<span
 					data-rank
 					class="absolute left-1 top-1 z-10 bg-white px-1 font-mono text-[10px] font-semibold leading-4 tabular-nums text-gray-600"
 					hidden
 				></span>
-				<CopyButton class="absolute right-1 top-1 z-10" hidden />
+				<CopyButton data-copy-smiles class="absolute right-1 top-1 z-10" hidden />
 				<div
 					data-svg
-					class="flex h-full w-full items-center justify-center p-1 [&_svg]:h-full [&_svg]:w-full"
-				><span class="text-2xl">;(</span></div>
+					class="flex h-full w-full items-center justify-center p-1 group-aria-busy:animate-pulse group-aria-busy:bg-gray-50 [&_svg]:h-full [&_svg]:w-full"
+				><span class="text-2xl group-aria-busy:hidden">;(</span></div>
 			</div>
 			<figcaption
 				class:list={[

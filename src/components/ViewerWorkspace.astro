@@ -4,6 +4,7 @@ import BaseLayout from '@/layouts/BaseLayout.astro'
 import ColumnFilters from '@/components/ColumnFilters.astro'
 import GraphTemplates from '@/components/GraphTemplates.astro'
 import MoleculeCard from '@/components/MoleculeCard.astro'
+import SetId from '@/components/SetId.astro'
 import Slicer from '@/components/Slicer.astro'
 import SmilesForm from '@/components/SmilesForm.astro'
 import TopBar from '@/components/TopBar.astro'
@@ -29,12 +30,17 @@ const isReinvent = mode === 'reinvent'
 			slot="sidebar"
 			placeholderSmiles={isReinvent ? REINVENT_EXAMPLE : SMILES_EXAMPLE}
 			blurOnEnter={isReinvent}
-			uploadLabel={isReinvent ? 'Upload a .csv/.tsv file' : 'Upload a .smi/.csv/.tsv file'}
+			uploadLabel={isReinvent ? 'Upload a .csv/.tsv file' : 'Upload a .smi/.smiles/.csv/.tsv file'}
 			fileAccept={isReinvent
 				? '.csv,.tsv,text/csv,text/tab-separated-values,text/plain'
-				: '.smi,.csv,.tsv,text/csv,text/tab-separated-values,text/plain'}
+				: '.smi,.smiles,.csv,.tsv,text/csv,text/tab-separated-values,text/plain'}
 		>
-			{!isReinvent && <ColumnFilters slot="form-options" />}
+			{!isReinvent && (
+				<Fragment slot="form-options">
+					<SetId />
+					<ColumnFilters />
+				</Fragment>
+			)}
 		</SmilesForm>
 
 		<TopBar
@@ -76,7 +82,7 @@ const isReinvent = mode === 'reinvent'
 			</section>
 		)}
 
-		<MoleculeCard virtualized />
+		<MoleculeCard virtualized copyId={!isReinvent} />
 		{isReinvent && <GraphTemplates />}
 	</AppShell>
 

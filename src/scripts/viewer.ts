@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import { parseDelimitedLine, readRows } from './lib/csv'
 import { isAllowedFile, MAX_FILE_SIZE } from './lib/files'
 import { createRDKitLoader, requestIdle, type RDKitModule } from './lib/rdkit'
-import { bindHorizontalArrows, createCopyHandler, createMessageController, restrictToDigits, setCardText } from './lib/dom'
+import { bindHorizontalArrows, createCopyHandler, createMessageController, restrictToDigits, setCardText, setCopyButton } from './lib/dom'
 import { bindNumericFilter, type NumericFilterControl } from './lib/numeric-filter'
 import { createStatusController } from './lib/status'
 import {
@@ -39,6 +39,8 @@ const initializeViewer = () => {
 	const columnFiltersPanel = document.querySelector<HTMLDivElement>('#column-filters')
 	const columnFilterList = document.querySelector<HTMLDivElement>('#column-filter-list')
 	const columnFilterTemplate = document.querySelector<HTMLTemplateElement>('#column-filter-template')
+	const setIdPanel = document.querySelector<HTMLDivElement>('#set-id')
+	const setIdSelect = document.querySelector<HTMLSelectElement>('#set-id-column')
 	const viewToggle = document.querySelector<HTMLElement>('#view-toggle')
 	const gallerySection = document.querySelector<HTMLElement>('#gallery-section')!
 	const graphsSection = document.querySelector<HTMLElement>('#graphs-section')
@@ -57,7 +59,7 @@ const initializeViewer = () => {
 
 	const ALLOWED_EXTENSIONS = reinventMode
 		? ['.csv', '.tsv']
-		: ['.smi', '.csv', '.tsv']
+		: ['.smi', '.smiles', '.csv', '.tsv']
 
 	const applyColumns = () => {
 		gallery.dataset.columns = columns.value
@@ -129,6 +131,7 @@ const initializeViewer = () => {
 	let items: Entry[] = []
 	let filterColumns: string[] = []
 	let columnFilterControls: ColumnFilterControl[] = []
+	let selectedIdColumn: string | null = null
 
 	let rdkitModule: RDKitModule | null = null
 	const svgCache = new Map<string, string>()
@@ -190,6 +193,10 @@ const initializeViewer = () => {
 		return value && column === MOLECULAR_MASS_COLUMN ? `${value} Da` : value
 	}
 
+	const cardId = (item: Entry) => selectedIdColumn
+		? (item.props[selectedIdColumn] ?? '')
+		: Object.keys(item.props).length === 0 ? item.id : ''
+
 	const matchesColumnFilters = (item: Entry) =>
 		columnFilterControls.every((filter) => {
 			if (!filter.numeric.enabled || !filter.column) return true
@@ -212,18 +219,13 @@ const initializeViewer = () => {
 		card.setAttribute('aria-busy', 'true')
 		const svgEl = card.querySelector<HTMLElement>('[data-svg]')
 		if (svgEl) {
-			svgEl.replaceChildren()
-			svgEl.classList.add('animate-pulse', 'bg-gray-50')
 			svgEl.setAttribute('aria-label', 'Molecule rendering pending')
 		}
 		card.dataset.itemIndex = String(index)
 		card.dataset.lazy = 'true'
-		const copyButton = card.querySelector<HTMLButtonElement>('[data-copy-smiles]')
-		if (copyButton) {
-			copyButton.hidden = false
-			copyButton.dataset.smiles = item.smiles
-			copyButton.setAttribute('aria-label', 'Copy SMILES')
-		}
+		const id = cardId(item)
+		setCopyButton(card, '[data-copy-smiles]', item.smiles, 'Copy SMILES')
+		setCopyButton(card, '[data-copy-id]', id, `Copy ID: ${id}`)
 		setCardValues(card, item, false)
 		return card
 	}
@@ -248,15 +250,8 @@ const initializeViewer = () => {
 
 		const svg = generateSvg(index)
 		setCardValues(card, items[index])
-		svgEl.classList.remove('animate-pulse', 'bg-gray-50')
 		svgEl.removeAttribute('aria-label')
 		if (svg) svgEl.innerHTML = svg
-		else {
-			const fallback = document.createElement('span')
-			fallback.className = 'text-2xl'
-			fallback.textContent = ';('
-			svgEl.replaceChildren(fallback)
-		}
 		card.removeAttribute('aria-busy')
 		delete card.dataset.lazy
 		delete card.dataset.queued
@@ -429,6 +424,21 @@ const initializeViewer = () => {
 		appendColumnFilter()
 		syncColumnFilterOptions()
 	}
+
+	const populateSetId = (columns: string[]) => {
+		selectedIdColumn = null
+		if (!setIdPanel || !setIdSelect) return
+		setIdSelect.replaceChildren(new Option('', ''))
+		for (const column of [...new Set(columns.filter(Boolean))]) {
+			setIdSelect.append(new Option(column, column))
+		}
+		setIdPanel.hidden = columns.length === 0
+	}
+
+	setIdSelect?.addEventListener('change', () => {
+		selectedIdColumn = setIdSelect.value || null
+		recompute()
+	})
 
 	const updateSortLabel = () => {
 		sortBtn.textContent = `Sort ${sortDir === 'desc' ? '↓' : '↑'}`
@@ -885,6 +895,7 @@ const initializeViewer = () => {
 		stepSlicer.hidden = true
 		populatePanel([])
 		populateColumnFilters([])
+		populateSetId([])
 		applyView()
 	}
 
@@ -894,6 +905,7 @@ const initializeViewer = () => {
 		stepSlicer.hidden = true
 		populatePanel([])
 		populateColumnFilters([])
+		populateSetId([])
 		applyView()
 	}
 
@@ -914,6 +926,7 @@ const initializeViewer = () => {
 		setTotals(0)
 		populatePanel([])
 		populateColumnFilters([])
+		populateSetId([])
 		graphColumns = []
 		buildGraphs()
 		applyView()
@@ -946,6 +959,7 @@ const initializeViewer = () => {
 
 		populatePanel(parsed.columns, true)
 		populateColumnFilters(parsed.columns)
+		populateSetId(parsed.columns)
 		setupStepSlicer()
 		setupGraphs()
 		applyView()

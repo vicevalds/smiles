@@ -48,14 +48,23 @@ export const copyText = async (text: string) => {
 }
 
 export const createCopyHandler = () => (event: MouseEvent) => {
-	const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-copy-smiles]')
-	if (!button?.dataset.smiles) return
-	void copyText(button.dataset.smiles).then(() => {
-		button.textContent = 'Copied'
+	const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-copy-button]')
+	const value = button?.dataset.copyValue
+	if (!button || value === undefined) return
+	void copyText(value).then(() => {
+		button.textContent = button.dataset.copySuccessText ?? 'Copied'
 		window.setTimeout(() => {
-			button.textContent = 'Copy'
+			button.textContent = button.dataset.copyIdleText ?? 'Copy'
 		}, 1200)
 	})
+}
+
+export const setCopyButton = (root: ParentNode, selector: string, value: string, label: string) => {
+	const button = root.querySelector<HTMLButtonElement>(selector)
+	if (!button || !value) return
+	button.hidden = false
+	button.dataset.copyValue = value
+	button.setAttribute('aria-label', label)
 }
 
 export const restrictToDigits = (input: HTMLInputElement) => {
