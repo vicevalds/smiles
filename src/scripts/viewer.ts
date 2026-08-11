@@ -135,6 +135,7 @@ const initializeViewer = () => {
 
 	let rdkitModule: RDKitModule | null = null
 	const svgCache = new Map<string, string>()
+	const smilesValidityCache = new Map<string, boolean>()
 	const molecularMass = new MolecularMassResolver()
 	const SVG_CACHE_CAP = 800
 	const generateSvg = (index: number): string => {
@@ -149,7 +150,9 @@ const initializeViewer = () => {
 		if (rdkitModule) {
 			const mol = rdkitModule.get_mol(smiles)
 			try {
-				if (mol?.is_valid()) {
+				const isValid = !!mol?.is_valid()
+				smilesValidityCache.set(smiles, isValid)
+				if (isValid) {
 					svg = mol.get_svg(300, 300)
 					try {
 						molecularMass.cacheDescriptors(smiles, mol.get_descriptors())
@@ -568,18 +571,52 @@ const initializeViewer = () => {
 		currentStepIndex = 0
 	}
 
-	type StatMode = 'medoid' | 'mean' | 'max'
-	const STAT_ORDER: StatMode[] = ['mean', 'max', 'medoid']
-	const STAT_LABELS: Record<StatMode, string> = { medoid: 'Medoid', mean: 'Mean', max: 'Max' }
+	type StatMode = 'medoid' | 'mean' | 'max' | 'min'
+	const STAT_ORDER: StatMode[] = ['mean', 'max', 'min', 'medoid']
+	const STAT_LABELS: Record<StatMode, string> = {
+		medoid: 'Medoid',
+		mean: 'Mean',
+		max: 'Max',
+		min: 'Min',
+	}
 
-	type StepStat = { x: number; mean: number; sd: number; max: number; medoid: number }
+	type StepStat = { x: number; mean: number; sd: number; max: number; min: number; medoid: number }
+
+	const hasReportedSmilesError = (item: Entry) => {
+		if (!smilesStateColumn) return false
+		const state = (item.props[smilesStateColumn] ?? '').trim().toLowerCase()
+		if (!state) return false
+		return !['1', 'true', 'valid', 'success'].includes(state)
+	}
+
+	const hasInvalidSmiles = (item: Entry) => {
+		if (hasReportedSmilesError(item)) return true
+		const cached = smilesValidityCache.get(item.smiles)
+		if (cached !== undefined) return !cached
+		if (!rdkitModule) return false
+
+		let mol: ReturnType<RDKitModule['get_mol']> = null
+		try {
+			mol = rdkitModule.get_mol(item.smiles)
+			const isValid = !!mol?.is_valid()
+			smilesValidityCache.set(item.smiles, isValid)
+			return !isValid
+		} catch {
+			smilesValidityCache.set(item.smiles, false)
+			return true
+		} finally {
+			mol?.delete()
+		}
+	}
 
 	const renderChart = (plot: HTMLElement, xCol: string, yCol: string, stat: StatMode) => {
 		const rows: { x: number; y: number }[] = []
 		for (const item of items) {
 			const x = parseFloat((item.props[xCol] ?? '').trim())
 			const y = parseFloat((item.props[yCol] ?? '').trim())
-			if (Number.isFinite(x) && Number.isFinite(y)) rows.push({ x, y })
+			if (!Number.isFinite(x) || !Number.isFinite(y)) continue
+			if (stat === 'min' && y === 0 && hasInvalidSmiles(item)) continue
+			rows.push({ x, y })
 		}
 		if (rows.length === 0) {
 			plot.replaceChildren(plotEmptyTemplate!.content.firstElementChild!.cloneNode(true))
@@ -598,6 +635,7 @@ const initializeViewer = () => {
 				const mean = ys.reduce((s, v) => s + v, 0) / n
 				const variance = ys.reduce((s, v) => s + (v - mean) ** 2, 0) / n
 				const max = ys.reduce((s, v) => Math.max(s, v), -Infinity)
+				const min = ys.reduce((s, v) => Math.min(s, v), Infinity)
 				const sorted = [...ys].sort((a, b) => a - b)
 				const mid = Math.floor(n / 2)
 				const median = n % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
@@ -605,7 +643,7 @@ const initializeViewer = () => {
 					(best, v) => (Math.abs(v - median) < Math.abs(best - median) ? v : best),
 					ys[0],
 				)
-				return { x, mean, sd: Math.sqrt(Math.max(0, variance)), max, medoid }
+				return { x, mean, sd: Math.sqrt(Math.max(0, variance)), max, min, medoid }
 			})
 			.sort((a, b) => a.x - b.x)
 
@@ -917,6 +955,7 @@ const initializeViewer = () => {
 		items = []
 		activeOrder = []
 		svgCache.clear()
+		smilesValidityCache.clear()
 		molecularMass.clear()
 		smilesStateColumn = null
 		steps = []
@@ -947,6 +986,7 @@ const initializeViewer = () => {
 
 		rdkitModule = rdkit
 		svgCache.clear()
+		smilesValidityCache.clear()
 
 		items = parsed.entries
 		smilesStateColumn =
