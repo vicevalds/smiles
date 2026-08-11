@@ -609,13 +609,24 @@ const initializeViewer = () => {
 		}
 	}
 
-	const renderChart = (plot: HTMLElement, xCol: string, yCol: string, stat: StatMode) => {
+	const renderChart = (
+		plot: HTMLElement,
+		xCol: string,
+		yCol: string,
+		stat: StatMode,
+		omitAllZerosInMin = false,
+	) => {
 		const rows: { x: number; y: number }[] = []
 		for (const item of items) {
 			const x = parseFloat((item.props[xCol] ?? '').trim())
 			const y = parseFloat((item.props[yCol] ?? '').trim())
 			if (!Number.isFinite(x) || !Number.isFinite(y)) continue
-			if (stat === 'min' && y === 0 && hasInvalidSmiles(item)) continue
+			if (
+				stat === 'min' &&
+				y === 0 &&
+				(omitAllZerosInMin || hasInvalidSmiles(item))
+			)
+				continue
 			rows.push({ x, y })
 		}
 		if (rows.length === 0) {
@@ -787,11 +798,12 @@ const initializeViewer = () => {
 		plot.replaceChildren(svg.node())
 	}
 
-	const makeChart = (xCol: string, yCol: string) => {
+	const makeChart = (xCol: string, yCol: string, omitAllZerosInMin = false) => {
 		const li = chartTemplate!.content.firstElementChild!.cloneNode(true) as HTMLLIElement
 		li.dataset.x = xCol
 		li.dataset.y = yCol
 		li.dataset.statMode = 'mean'
+		li.dataset.omitAllZerosInMin = String(omitAllZerosInMin)
 		const title = `${yCol} vs ${xCol}`
 		const titleEl = li.querySelector<HTMLElement>('[data-title]')!
 		titleEl.textContent = title
@@ -799,7 +811,13 @@ const initializeViewer = () => {
 		li.querySelector<HTMLButtonElement>('[data-remove]')?.addEventListener('click', () => {
 			li.remove()
 		})
-		renderChart(li.querySelector<HTMLElement>('[data-plot]')!, xCol, yCol, 'mean')
+		renderChart(
+			li.querySelector<HTMLElement>('[data-plot]')!,
+			xCol,
+			yCol,
+			'mean',
+			omitAllZerosInMin,
+		)
 		return li
 	}
 
@@ -836,7 +854,11 @@ const initializeViewer = () => {
 		if (!graphsList) return
 		graphsList.replaceChildren()
 		if (graphColumns.length === 0) return
-		if (defaultX && defaultY) graphsList.append(makeChart(defaultX, defaultY))
+		if (defaultX && defaultY) {
+			const isDefaultScoreStep =
+				reinventMode && normalizedColumn(defaultX) === 'step' && normalizedColumn(defaultY) === 'score'
+			graphsList.append(makeChart(defaultX, defaultY, isDefaultScoreStep))
+		}
 		graphsList.append(makeCreator())
 	}
 
@@ -898,7 +920,13 @@ const initializeViewer = () => {
 			const next = STAT_ORDER[(STAT_ORDER.indexOf(cur) + 1) % STAT_ORDER.length]
 			li.dataset.statMode = next
 			statBtn.textContent = STAT_LABELS[next]
-			renderChart(li.querySelector<HTMLElement>('[data-plot]')!, li.dataset.x!, li.dataset.y!, next)
+			renderChart(
+				li.querySelector<HTMLElement>('[data-plot]')!,
+				li.dataset.x!,
+				li.dataset.y!,
+				next,
+				li.dataset.omitAllZerosInMin === 'true',
+			)
 			return
 		}
 
