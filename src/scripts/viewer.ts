@@ -203,7 +203,7 @@ const initializeViewer = () => {
 	const matchesColumnFilters = (item: Entry) =>
 		columnFilterControls.every((filter) => {
 			if (!filter.numeric.enabled || !filter.column) return true
-			const rawValue = (item.props[filter.column] ?? '').trim()
+			const rawValue = displayValue(item, filter.column).trim()
 			return rawValue !== '' && filter.numeric.matches(Number(rawValue))
 		})
 
@@ -1026,7 +1026,7 @@ const initializeViewer = () => {
 		renderSummary.hidden = !reinventMode
 
 		populatePanel(parsed.columns, true)
-		populateColumnFilters(parsed.columns)
+		populateColumnFilters(withMolecularMassColumn(parsed.columns))
 		populateSetId(parsed.columns)
 		setupStepSlicer()
 		setupGraphs()
