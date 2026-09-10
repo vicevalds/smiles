@@ -20,6 +20,7 @@ const {
 	type={type}
 	class:list={[
 		'inline-flex h-[26px] cursor-pointer items-center justify-center whitespace-nowrap border-2 border-accent-2 py-0 text-black hover:border-accent-2 hover:bg-accent-2 aria-pressed:border-accent-2 aria-pressed:bg-accent-2',
+		"data-[slot=1]:border-gray-600 data-[slot=1]:bg-gray-600 data-[slot=1]:text-white data-[slot=3]:border-gray-600 data-[slot=3]:bg-gray-600 data-[slot=3]:text-white",
 		grow && 'grow',
 		padded ? 'px-2' : 'px-0',
 		className,
@@ -27,11 +28,3 @@ const {
 >
 	<slot />
 </button>
-
-<style>
-	button:is([data-slot='1'], [data-slot='3']) {
-		border-color: var(--color-gray-600);
-		background: var(--color-gray-600);
-		color: white;
-	}
-</style>

@@ -8,8 +8,6 @@ type Props = {
 	placeholderSmiles: string
 	uploadLabel: string
 	fileAccept: string
-	showColumns?: boolean
-	showDisplaySort?: boolean
 	blurOnEnter?: boolean
 }
 
@@ -17,8 +15,6 @@ const {
 	placeholderSmiles,
 	uploadLabel,
 	fileAccept,
-	showColumns = true,
-	showDisplaySort = true,
 	blurOnEnter = false,
 } = Astro.props
 ---
@@ -54,15 +50,23 @@ const {
 	</FormGroup>
 
 	<div class="flex flex-col gap-2">
-		<ActionButton
-			id="render-btn"
-			type="submit"
-			disabled
-			variant="primary"
-			full
-		>
-			Render
-		</ActionButton>
+		<div class="flex gap-2">
+			<ActionButton
+				id="render-btn"
+				type="submit"
+				disabled
+				variant="primary"
+				class="flex-4"
+			>
+				Render
+			</ActionButton>
+			<ActionButton
+				id="clean-btn"
+				class="flex-1 !border-accent !bg-white hover:!border-transparent hover:!bg-white"
+			>
+				Clean
+			</ActionButton>
+		</div>
 		<p class="text-gray-500">
 			or render an{' '}
 			<button
@@ -82,7 +86,7 @@ const {
 		></p>
 	</div>
 
-	{showColumns && <FormGroup id="columns-panel" hidden>
+	<FormGroup id="columns-panel" hidden>
 		<label for="columns" class="flex items-center justify-between">
 			<span class="font-semibold">SMILES per row</span>
 			<span id="columns-value" class="font-semibold tabular-nums">5</span>
@@ -96,7 +100,7 @@ const {
 			value="5"
 			class="w-full"
 		/>
-	</FormGroup>}
+	</FormGroup>
 
 	<FormGroup id="display-panel" hidden>
 		<span class="font-semibold">Display Value</span>
@@ -108,24 +112,9 @@ const {
 		<template id="pill-template">
 			<PillButton aria-pressed="false" />
 		</template>
-		{showDisplaySort && (
-			<ActionButton
-				id="sort-btn"
-				disabled
-				full
-			>
-				Sort
-			</ActionButton>
-		)}
+		<ActionButton id="sort-btn" disabled full>Sort</ActionButton>
 	</FormGroup>
 	<slot name="form-options" />
 </form>
 
 <script src="@/scripts/form.ts"></script>
-
-<style>
-	#column-options {
-		inline-size: calc(100% + 0.5rem);
-		scrollbar-gutter: stable;
-	}
-</style>

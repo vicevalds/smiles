@@ -1,9 +1,8 @@
 ---
 import AppShell from '@/components/AppShell.astro'
 import BaseLayout from '@/layouts/BaseLayout.astro'
+import ColumnFilters from '@/components/ColumnFilters.astro'
 import MoleculeCard from '@/components/MoleculeCard.astro'
-import NeighborSort from '@/components/NeighborSort.astro'
-import NumericFilter from '@/components/NumericFilter.astro'
 import Slicer from '@/components/Slicer.astro'
 import SmilesForm from '@/components/SmilesForm.astro'
 import TopBar from '@/components/TopBar.astro'
@@ -17,21 +16,15 @@ import { NEIGHBOR_EXAMPLE } from '@/scripts/lib/examples'
 			placeholderSmiles={NEIGHBOR_EXAMPLE}
 			uploadLabel="Upload a .csv/.tsv file"
 			fileAccept=".csv,.tsv,text/csv,text/tab-separated-values,text/plain"
-			showColumns={false}
-			showDisplaySort={false}
 		>
 			<Fragment slot="form-options">
-				<NumericFilter id="similarity-cutoff" label="Similarity cutoff" defaultValue="0.5" min={0} />
-				<NumericFilter id="value-filter" label="Filter Value" />
-				<NeighborSort />
+				<ColumnFilters />
 			</Fragment>
 		</SmilesForm>
 
 		<TopBar
 			summaryLabel="Matching Molecules"
-			totalLabel="Unique Molecules"
-			filteredTotalLabel="Filtered Molecules"
-			combineCounts
+			totalLabel="Molecules"
 			sticky={false}
 			controlsFirst
 		>
@@ -41,17 +34,18 @@ import { NEIGHBOR_EXAMPLE } from '@/scripts/lib/examples'
 		<section
 			id="gallery-section"
 			aria-labelledby="gallery-title"
-			class="grid h-[calc(100vh-6rem)] grid-cols-5 gap-4 overflow-hidden pl-4"
+			data-columns="5"
+			class="nn-gallery grid h-[calc(100vh-6rem)] gap-4 overflow-hidden pl-4"
 		>
 			<h1 id="gallery-title" class="sr-only">Nearest-neighbor molecules</h1>
 			<ul id="query-card" class="self-start"></ul>
 			<ul
 				id="gallery"
-				class="scrollbar-hover col-span-4 grid max-h-full grid-cols-subgrid auto-rows-max content-start gap-4 overflow-y-auto"
+				class="scrollbar-hover col-start-2 col-end-[-1] grid max-h-full grid-cols-subgrid auto-rows-max content-start gap-4 overflow-y-auto"
 			></ul>
 		</section>
 
-		<MoleculeCard />
+		<MoleculeCard copyId />
 	</AppShell>
 
 	<script src="@/scripts/nn-viewer.ts"></script>

@@ -2,39 +2,25 @@
 import CopyButton from '@/components/CopyButton.astro'
 
 interface Props {
-	templateId?: string
-	borderColorClass?: string
-	cardClass?: string
-	figureClass?: string
-	imageClass?: string
-	captionClass?: string
 	virtualized?: boolean
 	copyId?: boolean
 }
 
 const {
-	templateId = 'card-template',
-	borderColorClass = 'border-accent-2',
-	cardClass = '',
-	figureClass = '',
-	imageClass = '',
-	captionClass = '',
 	virtualized = false,
 	copyId = false,
 } = Astro.props
 ---
 
-<template id={templateId}>
+<template id="card-template">
 	<li
 		class:list={[
-			'group flex flex-col overflow-hidden border-2 data-[variant=cutoff]:border-accent data-[variant=query]:border-accent-2',
+			'group flex flex-col overflow-hidden border-2 border-accent-2 data-[variant=cutoff]:border-accent data-[variant=query]:border-accent-2',
 			virtualized && 'molecule-card',
-			borderColorClass,
-			cardClass,
 		]}
 	>
-		<figure class:list={['flex flex-col', figureClass]}>
-			<div class:list={['relative aspect-square', imageClass]}>
+		<figure class="flex flex-col">
+			<div class="relative aspect-square">
 				{copyId && (
 					<CopyButton
 						data-copy-id
@@ -46,7 +32,7 @@ const {
 				)}
 				<span
 					data-rank
-					class="absolute left-1 top-1 z-10 bg-white px-1 font-mono text-[10px] font-semibold leading-4 tabular-nums text-gray-600"
+					class="absolute bottom-1 left-1 z-10 bg-white px-1 font-mono text-[10px] font-semibold leading-4 tabular-nums text-gray-600"
 					hidden
 				></span>
 				<CopyButton data-copy-smiles class="absolute right-1 top-1 z-10" hidden />
@@ -56,17 +42,13 @@ const {
 				><span class="text-2xl group-aria-busy:hidden">;(</span></div>
 			</div>
 			<figcaption
-				class:list={[
-					"h-9 border-t font-mono text-xs group-data-[display-rows='2']:h-18 group-data-[variant=cutoff]:border-accent group-data-[variant=query]:border-accent-2",
-					borderColorClass,
-					captionClass,
-				]}
+				class="h-9 border-t border-accent-2 font-mono text-xs group-data-[display-rows='2']:h-18 group-data-[variant=cutoff]:border-accent group-data-[variant=query]:border-accent-2"
 			>
-				<div class="flex h-[35px] items-center gap-2 px-2 group-data-[display-rows='2']:translate-y-1">
+				<div class="flex h-[35px] items-center gap-2 px-2">
 					<span data-name class="min-w-0 flex-1 truncate"></span>
 					<span data-value class="shrink-0 tabular-nums text-gray-600"></span>
 				</div>
-				<div class="hidden h-9 items-center gap-2 px-2 group-data-[display-rows='2']:-translate-y-1 group-data-[display-rows='2']:flex">
+				<div class="hidden h-9 items-center gap-2 px-2 group-data-[display-rows='2']:flex">
 					<span data-extra-name class="min-w-0 flex-1 truncate"></span>
 					<span data-extra-value class="shrink-0 tabular-nums text-gray-600"></span>
 				</div>
@@ -74,14 +56,3 @@ const {
 		</figure>
 	</li>
 </template>
-
-<style>
-	.molecule-card {
-		content-visibility: auto;
-		contain-intrinsic-size: auto 260px;
-	}
-
-	.molecule-card[data-display-rows='2'] {
-		contain-intrinsic-size: auto 296px;
-	}
-</style>

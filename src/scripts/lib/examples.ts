@@ -50,7 +50,7 @@ export const REINVENT_EXAMPLE = `Step,SMILES,Agent,Prior,Target,Score,SMILES_sta
 4,CCOC(=O)N1CCC(CC1)c2ccccc2,-0.69,-0.68,0.97,0.91,1
 4,CN(C)CCc1ccc(O)cc1,-0.72,-0.70,0.92,0.85,1`
 
-export const NEIGHBOR_EXAMPLE = `query,tanimoto,query_SMILES,compound_SMILES,compound_name,demo_score
+export const NEIGHBOR_EXAMPLE = `query_id,tanimoto,query_SMILES,compound_SMILES,compound_id,demo_score
 RIVAROXABAN,0.62,O=C(NC[C@H]1CN(c2ccc(N3CCOCC3=O)cc2)C(=O)O1)c1ccc(Cl)s1,COC1=CC=C(C=C1)N2C3=C(CCN(C3=O)C4=CC=C(C=C4)N5CCCCC5=O)C(=N2)C(=O)N,APIXABAN,82
 RIVAROXABAN,0.32,O=C(NC[C@H]1CN(c2ccc(N3CCOCC3=O)cc2)C(=O)O1)c1ccc(Cl)s1,CCOC(=O)c1ccccc1,ETHYL BENZOATE,45
 APIXABAN,1.00,COC1=CC=C(C=C1)N2C3=C(CCN(C3=O)C4=CC=C(C=C4)N5CCCCC5=O)C(=N2)C(=O)N,COC1=CC=C(C=C1)N2C3=C(CCN(C3=O)C4=CC=C(C=C4)N5CCCCC5=O)C(=N2)C(=O)N,APIXABAN,98

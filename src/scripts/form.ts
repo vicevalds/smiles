@@ -1,3 +1,5 @@
+import { clearSharedViewerInput } from './lib/viewer-input'
+
 const initializeForm = () => {
 	const form = document.querySelector<HTMLFormElement>('#smiles-form')
 
@@ -6,6 +8,7 @@ const initializeForm = () => {
 	const textarea = form.querySelector<HTMLTextAreaElement>('#smiles-text')!
 	const file = form.querySelector<HTMLInputElement>('#smiles-file')!
 	const renderButton = form.querySelector<HTMLButtonElement>('#render-btn')!
+	const cleanButton = form.querySelector<HTMLButtonElement>('#clean-btn')!
 	const renderExample = form.querySelector<HTMLButtonElement>('#render-example')!
 
 	const syncExampleState = () => {
@@ -23,6 +26,14 @@ const initializeForm = () => {
 		file.value = ''
 		textarea.dispatchEvent(new Event('input', { bubbles: true }))
 		form.requestSubmit(renderButton)
+	})
+
+	cleanButton.addEventListener('click', () => {
+		textarea.value = ''
+		file.value = ''
+		clearSharedViewerInput()
+		textarea.dispatchEvent(new Event('input', { bubbles: true }))
+		form.dispatchEvent(new CustomEvent('viewer:clean'))
 	})
 
 	textarea.addEventListener('keydown', (event) => {

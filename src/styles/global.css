@@ -50,3 +50,104 @@
     background: var(--color-accent);
   }
 }
+
+#column-options {
+  inline-size: calc(100% + 0.5rem);
+  scrollbar-gutter: stable;
+}
+
+.molecule-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
+}
+
+.molecule-card[data-display-rows='2'] {
+  contain-intrinsic-size: auto 296px;
+}
+
+#gallery-section[data-gallery-rows] {
+  --visible-row-count: attr(data-gallery-rows type(<number>), 3);
+}
+
+#gallery-section[data-gallery-rows] #gallery {
+  --column-count: attr(data-columns type(<number>), 5);
+  --card-row-count: attr(data-card-rows type(<number>), 1);
+  --caption-height: calc(2.25rem * var(--card-row-count));
+  --card-width: calc((100cqw - (var(--column-count) - 1) * 1rem) / var(--column-count));
+  inline-size: calc(100% + 0.5rem);
+  max-height: calc(
+    (var(--card-width) + var(--caption-height)) * var(--visible-row-count) +
+    (var(--visible-row-count) - 1) * 1rem
+  );
+  scrollbar-gutter: stable;
+}
+
+.nn-gallery {
+  --column-count: attr(data-columns type(<number>), 5);
+  grid-template-columns: repeat(var(--column-count), minmax(0, 1fr));
+}
+
+[data-plot] {
+  --chart-axis: var(--color-gray-500);
+  --chart-band: var(--color-accent-2);
+  --chart-line: var(--color-gray-600);
+  --chart-muted: var(--color-gray-400);
+  --chart-strong: var(--color-gray-700);
+}
+
+.chart-root {
+  color: var(--chart-axis);
+}
+
+.chart-band {
+  fill: var(--chart-band);
+  fill-opacity: 0.25;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--chart-line);
+  stroke-width: 1.5;
+}
+
+.chart-point {
+  fill: var(--chart-line);
+  r: 2.5;
+}
+
+[data-axis-label],
+[data-chart-tip] {
+  fill: var(--chart-line);
+}
+
+.chart-crosshair {
+  stroke: var(--chart-muted);
+  stroke-dasharray: 3 3;
+}
+
+.chart-hover-point {
+  fill: none;
+  r: 4;
+  stroke: var(--chart-strong);
+  stroke-width: 1.5;
+}
+
+.chart-tooltip-bg {
+  fill: white;
+  rx: 2;
+  stroke: var(--chart-muted);
+}
+
+[data-chart-hover][data-visible='false'],
+[data-chart-tip-box][data-visible='false'] {
+  display: none;
+}
+
+[data-chart-tip-box] {
+  pointer-events: none;
+}
+
+[data-chart-overlay] {
+  fill: none;
+  pointer-events: all;
+}

@@ -1,17 +1,17 @@
 import * as d3 from 'd3'
+import { bindColumnFilters } from './lib/column-filters'
 import { parseDelimitedLine, readRows } from './lib/csv'
+import { bindDisplayValues } from './lib/display-values'
 import { isAllowedFile, MAX_FILE_SIZE } from './lib/files'
 import { createRDKitLoader, requestIdle, type RDKitModule } from './lib/rdkit'
 import { bindHorizontalArrows, createCopyHandler, createMessageController, restrictToDigits, setCardText, setCopyButton } from './lib/dom'
-import { bindNumericFilter, type NumericFilterControl } from './lib/numeric-filter'
 import { createStatusController } from './lib/status'
 import {
 	MOLECULAR_MASS_COLUMN,
 	MolecularMassResolver,
 	withMolecularMassColumn,
 } from './lib/molecular-mass'
-
-let sharedViewerInput: string | null = null
+import { getSharedViewerInput, setSharedViewerInput } from './lib/viewer-input'
 
 const initializeViewer = () => {
 	const viewerRoot = document.querySelector<HTMLElement>('[data-viewer-mode]')
@@ -34,11 +34,7 @@ const initializeViewer = () => {
 	const cardTemplate = document.querySelector<HTMLTemplateElement>('#card-template')!
 	const pillTemplate = document.querySelector<HTMLTemplateElement>('#pill-template')!
 	const displayPanel = document.querySelector<HTMLDivElement>('#display-panel')!
-	const columnOptions = document.querySelector<HTMLDivElement>('#column-options')!
-	const sortBtn = document.querySelector<HTMLButtonElement>('#sort-btn')!
 	const columnFiltersPanel = document.querySelector<HTMLDivElement>('#column-filters')
-	const columnFilterList = document.querySelector<HTMLDivElement>('#column-filter-list')
-	const columnFilterTemplate = document.querySelector<HTMLTemplateElement>('#column-filter-template')
 	const setIdPanel = document.querySelector<HTMLDivElement>('#set-id')
 	const setIdSelect = document.querySelector<HTMLSelectElement>('#set-id-column')
 	const viewToggle = document.querySelector<HTMLElement>('#view-toggle')
@@ -82,12 +78,6 @@ const initializeViewer = () => {
 	})
 
 	type Entry = { smiles: string; id: string; props: Record<string, string> }
-	type ColumnFilterControl = {
-		select: HTMLSelectElement
-		column: string | null
-		numeric: NumericFilterControl
-	}
-
 	type Parsed = { entries: Entry[]; columns: string[]; stepColumn: string | null }
 
 	const normalizedColumn = (column: string) => column.replace(/^\uFEFF/, '').trim().toLowerCase()
@@ -129,8 +119,7 @@ const initializeViewer = () => {
 	}
 
 	let items: Entry[] = []
-	let filterColumns: string[] = []
-	let columnFilterControls: ColumnFilterControl[] = []
+	let renderGeneration = 0
 	let selectedIdColumn: string | null = null
 
 	let rdkitModule: RDKitModule | null = null
@@ -171,17 +160,12 @@ const initializeViewer = () => {
 		}
 		return svg
 	}
-	type DisplaySlots = [string | null, string | null, string | null, string | null]
-	let slots: DisplaySlots = [null, null, null, null]
-	let sortedColumn: string | null = null
-	let sortDir: 'desc' | 'asc' = 'desc'
 	let stepColumn: string | null = null
 	let smilesStateColumn: string | null = null
 	let steps: string[] = []
 	let currentStepIndex = 0
 
 	let view: 'viewer' | 'graphs' = 'viewer'
-	let hasDisplay = false
 	let graphColumns: string[] = []
 	let defaultX: string | null = null
 	let defaultY: string | null = null
@@ -195,20 +179,15 @@ const initializeViewer = () => {
 		const value = displayValue(item, column, resolveComputed)
 		return value && column === MOLECULAR_MASS_COLUMN ? `${value} Da` : value
 	}
+	const display = bindDisplayValues(displayPanel, pillTemplate, () => recompute())
+	const columnFilters = bindColumnFilters(columnFiltersPanel, () => recompute(), displayValue)
 
 	const cardId = (item: Entry) => selectedIdColumn
 		? (item.props[selectedIdColumn] ?? '')
 		: Object.keys(item.props).length === 0 ? item.id : ''
 
-	const matchesColumnFilters = (item: Entry) =>
-		columnFilterControls.every((filter) => {
-			if (!filter.numeric.enabled || !filter.column) return true
-			const rawValue = displayValue(item, filter.column).trim()
-			return rawValue !== '' && filter.numeric.matches(Number(rawValue))
-		})
-
 	const setCardValues = (card: HTMLLIElement, item: Entry, resolveComputed = true) => {
-		const values = slots.map((column) =>
+		const values = display.slots.map((column) =>
 			column ? formattedDisplayValue(item, column, resolveComputed) : '',
 		)
 		values[0] ||= (reinventMode ? '' : item.id) || item.smiles
@@ -218,7 +197,7 @@ const initializeViewer = () => {
 	const buildCard = (index: number) => {
 		const item = items[index]
 		const card = cardTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement
-		if (slots[2] !== null) card.dataset.displayRows = '2'
+		if (display.slots[2] !== null) card.dataset.displayRows = '2'
 		card.setAttribute('aria-busy', 'true')
 		const svgEl = card.querySelector<HTMLElement>('[data-svg]')
 		if (svgEl) {
@@ -315,11 +294,11 @@ const initializeViewer = () => {
 
 	const computeOrder = (): number[] => {
 		const base = items.map((_, i) => i)
-		const col = sortedColumn
+		const col = display.sortedColumn
 		if (!col) return base
 		const raw = (i: number) => displayValue(items[i], col).trim()
 		const numeric = base.every((i) => raw(i) === '' || Number.isFinite(parseFloat(raw(i))))
-		const dir = sortDir === 'desc' ? 1 : -1
+		const dir = display.sortDirection === 'desc' ? 1 : -1
 		return base.sort((a, b) => {
 			const va = raw(a)
 			const vb = raw(b)
@@ -339,7 +318,7 @@ const initializeViewer = () => {
 
 	const renderGallery = () => {
 		galleryVersion++
-		gallery.dataset.cardRows = slots[2] === null ? '1' : '2'
+		gallery.dataset.cardRows = display.slots[2] === null ? '1' : '2'
 		lazyCards = []
 		cardObserver?.disconnect()
 		const fragment = document.createDocumentFragment()
@@ -359,7 +338,7 @@ const initializeViewer = () => {
 	const recompute = () => {
 		activeOrder = computeOrder()
 			.filter(itemInStep)
-			.filter((index) => matchesColumnFilters(items[index]))
+			.filter((index) => columnFilters.matches(items[index]))
 		if (stepActive()) {
 			stepInput.value = String(currentStepIndex + 1)
 			setSummary(activeOrder.filter(hasValidSmilesState).length)
@@ -368,64 +347,6 @@ const initializeViewer = () => {
 		} else setSummary(activeOrder.length)
 		if (reinventMode && items.length > 0) renderSummary.hidden = false
 		renderGallery()
-	}
-
-	const syncColumnFilterOptions = () => {
-		const selectedColumns = new Set(
-			columnFilterControls.flatMap((filter) => filter.column ? [filter.column] : []),
-		)
-		for (const filter of columnFilterControls) {
-			filter.select.replaceChildren(new Option('', ''))
-			for (const column of filterColumns) {
-				if (column !== filter.column && selectedColumns.has(column)) continue
-				filter.select.append(new Option(column, column))
-			}
-			filter.select.value = filter.column ?? ''
-		}
-	}
-
-	const appendColumnFilter = () => {
-		if (!columnFilterList || !columnFilterTemplate) return
-		const element = columnFilterTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement
-		const select = element.querySelector<HTMLSelectElement>('[data-filter-column]')!
-		const numeric = bindNumericFilter(element, recompute)
-		const filter: ColumnFilterControl = {
-			select,
-			column: null,
-			numeric,
-		}
-
-		select.addEventListener('change', () => {
-			filter.column = select.value || null
-			numeric.reset()
-			numeric.setAvailable(filter.column !== null, filter.column ?? 'Filter')
-
-			if (
-				filter.column === null &&
-				columnFilterControls.some((candidate) => candidate !== filter && candidate.column === null)
-			) {
-				numeric.element.remove()
-				columnFilterControls = columnFilterControls.filter((candidate) => candidate !== filter)
-			}
-			if (!columnFilterControls.some((candidate) => candidate.column === null)) appendColumnFilter()
-			syncColumnFilterOptions()
-			recompute()
-		})
-
-		columnFilterControls.push(filter)
-		columnFilterList.append(element)
-		numeric.setAvailable(false)
-	}
-
-	const populateColumnFilters = (columns: string[]) => {
-		if (!columnFiltersPanel || !columnFilterList || !columnFilterTemplate) return
-		filterColumns = [...new Set(columns.filter(Boolean))]
-		columnFilterControls = []
-		columnFilterList.replaceChildren()
-		columnFiltersPanel.hidden = filterColumns.length === 0
-		if (filterColumns.length === 0) return
-		appendColumnFilter()
-		syncColumnFilterOptions()
 	}
 
 	const populateSetId = (columns: string[]) => {
@@ -443,71 +364,10 @@ const initializeViewer = () => {
 		recompute()
 	})
 
-	const updateSortLabel = () => {
-		sortBtn.textContent = `Sort ${sortDir === 'desc' ? '↓' : '↑'}`
-	}
-
-	const updatePills = () => {
-		columnOptions.querySelectorAll<HTMLButtonElement>('[data-column]').forEach((pill) => {
-			const slot = slots.indexOf(pill.dataset.column ?? '')
-			if (slot === -1) delete pill.dataset.slot
-			else pill.dataset.slot = String(slot)
-			pill.setAttribute('aria-pressed', String(slot !== -1))
-		})
-	}
-
 	const populatePanel = (cols: string[], includeMolecularMass = false) => {
-		const displayColumns = includeMolecularMass ? withMolecularMassColumn(cols) : cols
-		slots = [null, null, null, null]
-		sortedColumn = null
-		sortDir = 'desc'
-		columnOptions.replaceChildren()
-		updateSortLabel()
-		sortBtn.disabled = true
-		hasDisplay = displayColumns.length > 0
-		if (!hasDisplay) {
-			displayPanel.hidden = true
-			return
-		}
-		displayPanel.hidden = view === 'graphs'
-		for (const c of displayColumns) {
-			const pill = pillTemplate.content.firstElementChild!.cloneNode(true) as HTMLButtonElement
-			pill.dataset.column = c
-			pill.textContent = c
-			columnOptions.append(pill)
-		}
+		display.populate(includeMolecularMass ? withMolecularMassColumn(cols) : cols)
+		displayPanel.hidden = view === 'graphs' || !display.hasColumns
 	}
-
-	columnOptions.addEventListener('click', (event) => {
-		const pill = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-column]')
-		if (!pill) return
-		const col = pill.dataset.column!
-		const selectedSlot = slots.indexOf(col)
-		if (selectedSlot !== -1) {
-			slots.splice(selectedSlot, 1)
-			slots.push(null)
-		} else {
-			const emptySlot = slots.indexOf(null)
-			if (emptySlot === -1) return
-			slots[emptySlot] = col
-		}
-
-		if (sortedColumn === null || !slots.includes(sortedColumn)) {
-			sortedColumn = slots[0]
-			sortDir = 'desc'
-		}
-		sortBtn.disabled = slots[0] === null
-		updatePills()
-		updateSortLabel()
-		recompute()
-	})
-
-	sortBtn.addEventListener('click', () => {
-		if (sortedColumn === null) return
-		sortDir = sortDir === 'desc' ? 'asc' : 'desc'
-		updateSortLabel()
-		recompute()
-	})
 
 	const setSummary = (rendered: number) => {
 		summaryRendered.textContent = String(rendered)
@@ -939,7 +799,7 @@ const initializeViewer = () => {
 		})
 		if (graphsSection) graphsSection.hidden = !graphs
 		gallerySection.hidden = graphs
-		displayPanel.hidden = graphs || !hasDisplay
+		displayPanel.hidden = graphs || !display.hasColumns
 	}
 
 	viewToggle?.addEventListener('click', (event) => {
@@ -960,7 +820,7 @@ const initializeViewer = () => {
 		if (stepTotal) stepTotal.textContent = '0'
 		stepSlicer.hidden = true
 		populatePanel([])
-		populateColumnFilters([])
+		columnFilters.populate([])
 		populateSetId([])
 		applyView()
 	}
@@ -970,12 +830,13 @@ const initializeViewer = () => {
 		renderTotal.hidden = true
 		stepSlicer.hidden = true
 		populatePanel([])
-		populateColumnFilters([])
+		columnFilters.populate([])
 		populateSetId([])
 		applyView()
 	}
 
 	const renderInput = async (text: string) => {
+		const generation = ++renderGeneration
 		renderBtn.disabled = true
 		const parsed = parseInput(text)
 		stepColumn = parsed.stepColumn
@@ -992,7 +853,7 @@ const initializeViewer = () => {
 		setSummary(0)
 		setTotals(0)
 		populatePanel([])
-		populateColumnFilters([])
+		columnFilters.populate([])
 		populateSetId([])
 		graphColumns = []
 		buildGraphs()
@@ -1007,7 +868,13 @@ const initializeViewer = () => {
 		try {
 			rdkit = await loadRDKit()
 		} catch {
-			showError('Failed to load the rendering engine. Check your connection and try again.')
+			if (generation === renderGeneration) {
+				showError('Failed to load the rendering engine. Check your connection and try again.')
+			}
+			renderBtn.disabled = false
+			return false
+		}
+		if (generation !== renderGeneration) {
 			renderBtn.disabled = false
 			return false
 		}
@@ -1026,7 +893,7 @@ const initializeViewer = () => {
 		renderSummary.hidden = !reinventMode
 
 		populatePanel(parsed.columns, true)
-		populateColumnFilters(withMolecularMassColumn(parsed.columns))
+		columnFilters.populate(withMolecularMassColumn(parsed.columns))
 		populateSetId(parsed.columns)
 		setupStepSlicer()
 		setupGraphs()
@@ -1039,6 +906,7 @@ const initializeViewer = () => {
 
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault()
+		const generation = renderGeneration
 		renderBtn.disabled = true
 		clearError()
 
@@ -1059,18 +927,44 @@ const initializeViewer = () => {
 			}
 			text += '\n' + (await file.text())
 		}
+		if (generation !== renderGeneration) return
 
-		if (await renderInput(text)) {
-			sharedViewerInput = text
-		}
+		if (await renderInput(text)) setSharedViewerInput(text)
+	})
+
+	form.addEventListener('viewer:clean', () => {
+		renderGeneration++
+		galleryVersion++
+		lazyCards = []
+		cardObserver?.disconnect()
+		gallery.replaceChildren()
+		items = []
+		activeOrder = []
+		svgCache.clear()
+		smilesValidityCache.clear()
+		molecularMass.clear()
+		stepColumn = null
+		smilesStateColumn = null
+		steps = []
+		currentStepIndex = 0
+		graphColumns = []
+		view = 'viewer'
+		buildGraphs()
+		columnsPanel.hidden = true
+		clearError()
+		clearStatus()
+		if (reinventMode) showPlaceholders()
+		else hidePlaceholders()
+		renderBtn.disabled = false
 	})
 
 	if (reinventMode) showPlaceholders()
 	else hidePlaceholders()
 
-	if (sharedViewerInput) {
-		textarea.value = sharedViewerInput
-		void renderInput(sharedViewerInput)
+	const sharedInput = getSharedViewerInput()
+	if (sharedInput) {
+		textarea.value = sharedInput
+		void renderInput(sharedInput)
 	}
 }
 

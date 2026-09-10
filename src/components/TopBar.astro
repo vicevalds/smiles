@@ -4,21 +4,15 @@ import Count from '@/components/Count.astro'
 type Props = {
 	summaryLabel: string
 	totalLabel: string
-	combineCounts?: boolean
-	filteredTotalLabel?: string
 	sticky?: boolean
 	controlsFirst?: boolean
-	showCounts?: boolean
 }
 
 const {
 	summaryLabel,
 	totalLabel,
-	combineCounts = false,
-	filteredTotalLabel = 'Filtered',
 	sticky = true,
 	controlsFirst = false,
-	showCounts = true,
 } = Astro.props
 ---
 
@@ -35,11 +29,9 @@ const {
 		class:list={[
 			'tabular-nums text-gray-500 whitespace-nowrap',
 			controlsFirst && 'order-2',
-			!showCounts && 'hidden',
 		]}
 		role="status"
 		aria-live="polite"
-		aria-hidden={!showCounts ? 'true' : undefined}
 		hidden
 	><Count dataAttribute="rendered">0</Count> {summaryLabel}</p>
 	<slot name="controls" />
@@ -48,19 +40,9 @@ const {
 		class:list={[
 			'tabular-nums text-gray-500 ml-auto pr-4 whitespace-nowrap',
 			controlsFirst && 'order-3',
-			!showCounts && 'hidden',
 		]}
-		aria-hidden={!showCounts ? 'true' : undefined}
 		hidden
 	>
-		{combineCounts ? (
-			<>
-				<Count dataAttribute="filtered-total-rendered">0</Count> {filteredTotalLabel}
-				<span aria-hidden="true"> / </span>
-				<Count dataAttribute="total-rendered">0</Count> {totalLabel}
-			</>
-		) : (
-			<><Count dataAttribute="total-rendered">0</Count> {totalLabel}</>
-		)}
+		<Count dataAttribute="total-rendered">0</Count> {totalLabel}
 	</p>
 </div>

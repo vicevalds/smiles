@@ -26,7 +26,7 @@ import PillButton from '@/components/PillButton.astro'
 </template>
 
 <template id="creator-template">
-	<li data-creator class="flex aspect-[9/8] w-full min-h-80 flex-col gap-2 overflow-hidden border-2 border-dashed border-gray-300 p-3">
+	<li data-creator class="flex aspect-[9/8] min-h-80 w-full flex-col gap-2 overflow-hidden border-2 border-dashed border-gray-300 p-3 [contain:size]">
 		<GraphAxis axis="y" />
 		<GraphAxis axis="x" />
 		<ActionButton data-create disabled class="shrink-0">Create</ActionButton>
@@ -36,74 +36,3 @@ import PillButton from '@/components/PillButton.astro'
 <template id="plot-empty-template">
 	<p class="text-sm text-gray-500">No data to plot.</p>
 </template>
-
-<style is:global>
-	[data-plot] {
-		--chart-axis: var(--color-gray-500);
-		--chart-band: var(--color-accent-2);
-		--chart-line: var(--color-gray-600);
-		--chart-muted: var(--color-gray-400);
-		--chart-strong: var(--color-gray-700);
-	}
-
-	.chart-root {
-		color: var(--chart-axis);
-	}
-
-	.chart-band {
-		fill: var(--chart-band);
-		fill-opacity: 0.25;
-	}
-
-	.chart-line {
-		fill: none;
-		stroke: var(--chart-line);
-		stroke-width: 1.5;
-	}
-
-	.chart-point {
-		fill: var(--chart-line);
-		r: 2.5;
-	}
-
-	[data-axis-label],
-	[data-chart-tip] {
-		fill: var(--chart-line);
-	}
-
-	.chart-crosshair {
-		stroke: var(--chart-muted);
-		stroke-dasharray: 3 3;
-	}
-
-	.chart-hover-point {
-		fill: none;
-		r: 4;
-		stroke: var(--chart-strong);
-		stroke-width: 1.5;
-	}
-
-	.chart-tooltip-bg {
-		fill: white;
-		rx: 2;
-		stroke: var(--chart-muted);
-	}
-
-	[data-chart-hover][data-visible='false'],
-	[data-chart-tip-box][data-visible='false'] {
-		display: none;
-	}
-
-	[data-chart-tip-box] {
-		pointer-events: none;
-	}
-
-	[data-chart-overlay] {
-		fill: none;
-		pointer-events: all;
-	}
-
-	[data-creator] {
-		contain: size;
-	}
-</style>
