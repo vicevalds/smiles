@@ -1,19 +1,20 @@
 export type NumericFilterControl = {
 	element: HTMLElement
 	readonly enabled: boolean
-	matches: (candidate: number) => boolean
+	matches: (candidate: number | string) => boolean
 	disable: () => void
 	reset: (value?: number | null) => void
 	setAvailable: (available: boolean, label?: string) => void
 }
 
-type Operator = '>' | '<' | '='
+type Operator = '>' | '<' | '=' | '~'
 
-const OPERATORS: Operator[] = ['>', '<', '=']
+const OPERATORS: Operator[] = ['>', '<', '=', '~']
 const OPERATOR_LABELS: Record<Operator, string> = {
 	'>': 'greater than',
 	'<': 'less than',
 	'=': 'equal to',
+	'~': 'text pattern',
 }
 
 export const bindNumericFilter = (
@@ -29,6 +30,8 @@ export const bindNumericFilter = (
 	let enabled = false
 	const initialValue = input.value.trim() ? Number(input.value) : Number.NaN
 	let value: number | null = Number.isFinite(initialValue) ? initialValue : null
+	let pattern: RegExp | null = null
+	const numericPlaceholder = input.placeholder
 
 	const update = () => {
 		operatorButton.disabled = !available
@@ -36,6 +39,15 @@ export const bindNumericFilter = (
 		toggleButton.disabled = !available
 		operatorButton.textContent = operator
 		operatorButton.setAttribute('aria-label', `${label} comparison: ${OPERATOR_LABELS[operator]}`)
+		operatorButton.title = 'Click to switch: >, <, =, ~ (text)'
+		input.type = operator === '~' ? 'text' : 'number'
+		input.inputMode = operator === '~' ? 'text' : 'decimal'
+		input.placeholder = operator === '~' ? 'Text / pattern' : numericPlaceholder
+		input.title = operator === '~'
+			? 'Contains text (case-sensitive). . matches any character; * repeats the preceding character zero or more times. Example: ABC.*'
+			: ''
+		input.classList.toggle('w-40', operator === '~')
+		input.classList.toggle('w-16', operator !== '~')
 		input.setAttribute('aria-label', `${label} value`)
 		toggleButton.textContent = enabled ? 'On' : 'Off'
 		toggleButton.setAttribute('aria-pressed', String(enabled))
@@ -50,6 +62,20 @@ export const bindNumericFilter = (
 	}
 
 	const commitInput = () => {
+		if (operator === '~') {
+			const rawValue = input.value.trim()
+			try {
+				// Only . and * retain their regular-expression meaning.
+				pattern = rawValue ? new RegExp(rawValue.replace(/[+?^${}()|[\]\\]/g, '\\$&'), 'u') : null
+				input.setCustomValidity('')
+				return pattern !== null
+			} catch {
+				pattern = null
+				input.setCustomValidity('Invalid pattern: * must follow a character or . and cannot be repeated.')
+				input.reportValidity()
+				return false
+			}
+		}
 		const parsed = parseInput()
 		if (parsed === null) {
 			input.value = value === null ? '' : String(value)
@@ -61,30 +87,45 @@ export const bindNumericFilter = (
 	}
 
 	const setEnabled = (next: boolean) => {
-		enabled = available && next && value !== null
+		enabled = available && next && (operator === '~' ? pattern !== null : value !== null)
 		update()
 	}
 
 	operatorButton.addEventListener('click', () => {
+		const wasText = operator === '~'
+		const wasEnabled = enabled
 		operator = OPERATORS[(OPERATORS.indexOf(operator) + 1) % OPERATORS.length]
+		if (wasText || operator === '~') {
+			value = null
+			pattern = null
+			input.value = ''
+			input.setCustomValidity('')
+			enabled = false
+		}
 		update()
-		if (enabled) onChange()
+		if (wasEnabled) onChange()
 	})
 
 	input.addEventListener('keydown', (event) => {
-		if (event.key === '-' && input.min !== '' && Number(input.min) >= 0) {
+		if (operator !== '~' && event.key === '-' && input.min !== '' && Number(input.min) >= 0) {
 			event.preventDefault()
 			return
 		}
 		if (event.key !== 'Enter') return
 		event.preventDefault()
-		if (!commitInput()) return
+		if (!commitInput()) {
+			setEnabled(false)
+			onChange()
+			return
+		}
 		setEnabled(true)
 		onChange()
 		toggleButton.focus()
 	})
 
 	input.addEventListener('input', () => {
+		input.setCustomValidity('')
+		if (operator === '~') return
 		const min = input.min === '' ? null : Number(input.min)
 		const parsed = Number(input.value)
 		if (input.value && min !== null && Number.isFinite(parsed) && parsed < min) {
@@ -115,16 +156,20 @@ export const bindNumericFilter = (
 			return enabled
 		},
 		matches(candidate) {
-			if (value === null || !Number.isFinite(candidate)) return false
-			if (operator === '>') return candidate > value
-			if (operator === '<') return candidate < value
-			return candidate === value
+			if (operator === '~') return pattern?.test(String(candidate)) ?? false
+			const numeric = typeof candidate === 'string' && !candidate.trim() ? Number.NaN : Number(candidate)
+			if (value === null || !Number.isFinite(numeric)) return false
+			if (operator === '>') return numeric > value
+			if (operator === '<') return numeric < value
+			return numeric === value
 		},
 		disable() {
 			setEnabled(false)
 		},
 		reset(nextValue = null) {
 			operator = '>'
+			pattern = null
+			input.setCustomValidity('')
 			value = nextValue
 			input.value = nextValue === null ? '' : String(nextValue)
 			setEnabled(false)

@@ -70,7 +70,7 @@ export const bindColumnFilters = <T>(
 			return filters.every((filter) => {
 				if (!filter.numeric.enabled || !filter.column) return true
 				const value = getValue(item, filter.column).trim()
-				return value !== '' && filter.numeric.matches(Number(value))
+				return value !== '' && filter.numeric.matches(value)
 			})
 		},
 		populate(nextColumns: string[]) {
