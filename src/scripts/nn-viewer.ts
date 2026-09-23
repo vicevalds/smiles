@@ -347,6 +347,11 @@ const initializeNNViewer = () => {
 		new Set(neighbors.map((neighbor) => neighbor.compoundSmiles)).size
 
 	const updateSummary = () => {
+		// Reserve the largest query's digit count, independently of the active query or filters.
+		const maxNeighbors = queryGroups.reduce((max, group) => Math.max(max, group.neighbors.length), 0)
+		summaryRendered.style.display = 'inline-block'
+		summaryRendered.style.minWidth = `${String(maxNeighbors).length}ch`
+		summaryRendered.style.textAlign = 'right'
 		summaryRendered.textContent = String(activeNeighbors.length)
 		renderSummary.hidden = queryGroups.length === 0
 		const allNeighbors = queryGroups.flatMap((group) => group.neighbors)
