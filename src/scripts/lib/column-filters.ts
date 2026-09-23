@@ -1,9 +1,9 @@
-import { bindNumericFilter, type NumericFilterControl } from './numeric-filter'
+import { bindFilter, type FilterControl } from './filter'
 
 type Filter = {
 	select: HTMLSelectElement
 	column: string | null
-	numeric: NumericFilterControl
+	control: FilterControl
 }
 
 type ColumnFilters<T> = {
@@ -43,13 +43,13 @@ export const bindColumnFilters = <T>(
 	const appendFilter = () => {
 		const element = template.content.firstElementChild!.cloneNode(true) as HTMLElement
 		const select = element.querySelector<HTMLSelectElement>('[data-filter-column]')!
-		const numeric = bindNumericFilter(element, onChange)
-		const filter: Filter = { select, column: null, numeric }
+		const control = bindFilter(element, onChange)
+		const filter: Filter = { select, column: null, control }
 
 		select.addEventListener('change', () => {
 			filter.column = select.value || null
-			numeric.reset()
-			numeric.setAvailable(filter.column !== null, filter.column ?? 'Filter')
+			control.reset()
+			control.setAvailable(filter.column !== null, filter.column ?? 'Filter')
 
 			if (filter.column === null && filters.some((item) => item !== filter && item.column === null)) {
 				element.remove()
@@ -62,15 +62,14 @@ export const bindColumnFilters = <T>(
 
 		filters.push(filter)
 		list.append(element)
-		numeric.setAvailable(false)
 	}
 
 	return {
 		matches(item: T) {
 			return filters.every((filter) => {
-				if (!filter.numeric.enabled || !filter.column) return true
+				if (!filter.control.enabled || !filter.column) return true
 				const value = getValue(item, filter.column).trim()
-				return value !== '' && filter.numeric.matches(value)
+				return value !== '' && filter.control.matches(value)
 			})
 		},
 		populate(nextColumns: string[]) {
