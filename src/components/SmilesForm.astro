@@ -25,29 +25,40 @@ const {
 	data-blur-on-enter={blurOnEnter ? 'true' : undefined}
 	transition:name="smiles-form"
 >
-	<FormGroup>
-		<label for="smiles-text" class="sr-only">Molecule input</label>
-		<textarea
-			id="smiles-text"
-			name="smiles-text"
-			rows="9"
-			placeholder={placeholderSmiles}
-			class="scrollbar-hover text-md border-2 border-accent p-1 pr-2 overflow-x-auto overflow-y-auto whitespace-nowrap placeholder:whitespace-pre
-				focus:outline-none focus:border-gray-300"
-		></textarea>
-	</FormGroup>
+	<div
+		data-file-drop-zone
+		class="group/drop-zone relative flex flex-col gap-6"
+	>
+		<FormGroup class="transition-opacity duration-150 ease-out motion-reduce:transition-none group-data-[dragging=true]/drop-zone:opacity-0">
+			<label for="smiles-text" class="sr-only">Molecule input</label>
+			<textarea
+				id="smiles-text"
+				name="smiles-text"
+				rows="9"
+				placeholder={placeholderSmiles}
+				class="scrollbar-hover text-md border-2 border-accent p-1 pr-2 overflow-x-auto overflow-y-auto whitespace-nowrap placeholder:whitespace-pre
+					focus:outline-none focus:border-gray-300"
+			></textarea>
+		</FormGroup>
 
-	<FormGroup>
-		<label for="smiles-file" class="font-semibold">{uploadLabel}</label>
-		<input
-			id="smiles-file"
-			name="smiles-file"
-			type="file"
-			accept={fileAccept}
-			class="w-full border-2 hover:cursor-pointer hover:file:cursor-pointer border-accent file:p-1 file:bg-accent
-			file:text-black text-gray-500 hover:file:bg-white file:border-r-2 file:border-accent"
-		/>
-	</FormGroup>
+		<FormGroup class="transition-opacity duration-150 ease-out motion-reduce:transition-none group-data-[dragging=true]/drop-zone:opacity-0">
+			<label for="smiles-file" class="font-semibold">{uploadLabel}</label>
+			<input
+				id="smiles-file"
+				name="smiles-file"
+				type="file"
+				accept={fileAccept}
+				class="w-full border-2 hover:cursor-pointer hover:file:cursor-pointer border-accent file:p-1 file:bg-accent
+				file:text-black text-gray-500 hover:file:bg-white file:border-r-2 file:border-accent"
+			/>
+		</FormGroup>
+		<div
+			aria-hidden="true"
+			class="pointer-events-none absolute inset-0 flex items-center justify-center border-2 border-dashed border-accent p-4 text-center font-semibold whitespace-pre-line opacity-0 transition-opacity duration-150 ease-out motion-reduce:transition-none group-data-[dragging=true]/drop-zone:opacity-100"
+		>
+			{uploadLabel.replace(' a ', '\na ')}
+		</div>
+	</div>
 
 	<div class="flex flex-col gap-2">
 		<div class="flex gap-2">

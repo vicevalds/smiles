@@ -1,3 +1,4 @@
+import { initializeFileDropZone } from './lib/file-drop-zone'
 import { clearSharedViewerInput } from './lib/viewer-input'
 
 const initializeForm = () => {
@@ -10,6 +11,8 @@ const initializeForm = () => {
 	const renderButton = form.querySelector<HTMLButtonElement>('#render-btn')!
 	const cleanButton = form.querySelector<HTMLButtonElement>('#clean-btn')!
 	const renderExample = form.querySelector<HTMLButtonElement>('#render-example')!
+
+	initializeFileDropZone(form.querySelector<HTMLElement>('[data-file-drop-zone]')!, file)
 
 	const syncExampleState = () => {
 		renderExample.disabled = renderButton.disabled
