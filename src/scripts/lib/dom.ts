@@ -1,21 +1,8 @@
-export const setText = (root: ParentNode, selector: string, text: string) => {
-	const element = root.querySelector<HTMLElement>(selector)
-	if (!element) return
-	element.textContent = text
-}
-
-export const setTitledText = (root: ParentNode, selector: string, text: string) => {
-	const element = root.querySelector<HTMLElement>(selector)
-	if (!element) return
-	element.textContent = text
-	element.title = text
-}
-
-const CARD_TEXT_SELECTORS = ['[data-name]', '[data-value]', '[data-extra-name]', '[data-extra-value]']
-
 export const setCardText = (root: ParentNode, values: string[], titled = false) => {
-	const setter = titled ? setTitledText : setText
-	CARD_TEXT_SELECTORS.forEach((selector, index) => setter(root, selector, values[index] ?? ''))
+	root.querySelectorAll<HTMLElement>('[data-card-value]').forEach((element) => {
+		element.textContent = values[Number(element.dataset.cardValue)] ?? ''
+		if (titled) element.title = element.textContent
+	})
 }
 
 export const createMessageController = (element: HTMLElement) => ({

@@ -20,7 +20,17 @@ import PillButton from '@/components/PillButton.astro'
 		</div>
 		<div
 			data-plot
-			class="p-2 [&_svg]:h-auto [&_svg]:w-full [&_svg]:select-none [&_svg]:font-mono [&_[data-axis-label]]:text-[11px] [&_[data-chart-tip]]:text-[10px] [&_[data-chart-overlay]]:cursor-crosshair"
+			class:list={[
+				"p-2 [&_svg]:h-auto [&_svg]:w-full [&_svg]:select-none [&_svg]:font-mono [&_[data-axis-label]]:text-[11px] [&_[data-chart-tip]]:text-[10px] [&_[data-chart-overlay]]:cursor-crosshair",
+				"[&_.chart-root]:text-gray-500 [&_.chart-band]:fill-accent-2 [&_.chart-band]:[fill-opacity:0.25]",
+				"[&_.chart-bar]:fill-accent-2 [&_.chart-bar[data-active=true]]:fill-gray-600",
+				"[&_.chart-line]:fill-none [&_.chart-line]:stroke-gray-600 [&_.chart-line]:stroke-[1.5]",
+				"[&_.chart-point]:fill-gray-600 [&_.chart-point]:[r:2.5] [&_[data-axis-label]]:fill-gray-600 [&_[data-chart-tip]]:fill-gray-600",
+				"[&_.chart-crosshair]:stroke-gray-400 [&_.chart-crosshair]:[stroke-dasharray:3_3]",
+				"[&_.chart-hover-point]:fill-none [&_.chart-hover-point]:[r:4] [&_.chart-hover-point]:stroke-gray-700 [&_.chart-hover-point]:stroke-[1.5]",
+				"[&_.chart-tooltip-bg]:fill-white [&_.chart-tooltip-bg]:[rx:2] [&_.chart-tooltip-bg]:stroke-gray-400",
+				"[&_[data-visible=false]]:hidden [&_[data-chart-tip-box]]:pointer-events-none [&_[data-chart-overlay]]:fill-none [&_[data-chart-overlay]]:[pointer-events:all]",
+			]}
 		></div>
 	</li>
 </template>

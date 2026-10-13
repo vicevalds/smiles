@@ -234,7 +234,7 @@ const initializeNNViewer = () => {
 			if (svgSlot && svg) svgSlot.innerHTML = svg
 		}
 		setCardText(card, values, true)
-		if (display.slots[2] !== null) card.dataset.displayRows = '2'
+		card.dataset.displayRows = display.rowCount
 		if (rank !== undefined) {
 			const rankElement = card.querySelector<HTMLElement>('[data-rank]')
 			if (rankElement) {
@@ -414,7 +414,7 @@ const initializeNNViewer = () => {
 			cards.push(card)
 			fragment.append(card)
 		}
-		gallery.dataset.cardRows = display.slots[2] === null ? '1' : '2'
+		gallery.dataset.cardRows = display.rowCount
 		gallery.scrollTop = 0
 		gallery.replaceChildren(fragment)
 		scheduleSvgRender(cards)
@@ -499,6 +499,7 @@ const initializeNNViewer = () => {
 
 	form.addEventListener('submit', (event) => {
 		event.preventDefault()
+		form.dispatchEvent(new CustomEvent('viewer:clean'))
 		renderBtn.disabled = true
 		void renderInput()
 			.catch((error) => {

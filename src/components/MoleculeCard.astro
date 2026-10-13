@@ -18,7 +18,7 @@ const {
 		class:list={[
 			'group flex flex-col overflow-hidden border-2 border-accent-2 data-[variant=cutoff]:border-accent',
 			'hidden:hidden [&[draggable=true]]:cursor-grab data-[camera-marked=true]:border-dashed data-[dragging=true]:cursor-grabbing data-[dragging=true]:opacity-40 data-[camera-export=true]:[content-visibility:visible]',
-			virtualized && '[content-visibility:auto] [contain-intrinsic-size:auto_260px] data-[display-rows=2]:[contain-intrinsic-size:auto_296px]',
+			virtualized && '[content-visibility:auto] [contain-intrinsic-size:auto_260px] data-[display-rows=2]:[contain-intrinsic-size:auto_296px] data-[display-rows=3]:[contain-intrinsic-size:auto_332px]',
 		]}
 	>
 		<figure class="flex flex-col">
@@ -38,23 +38,25 @@ const {
 					hidden
 				></span>
 				<CopyButton data-copy-smiles class="absolute right-1 top-1 z-10" hidden />
-				<CameraButton data-camera-eye label="Mark cell to hide" class="absolute right-1 top-[26px] z-10 border border-accent-2 bg-white p-px" hidden />
+				<CameraButton data-camera-eye label="Mark cell to hide" class="absolute right-1 bottom-1 z-10 border border-accent-2 bg-white p-px" hidden />
 				<div
 					data-svg
 					class="flex h-full w-full items-center justify-center p-1 group-aria-busy:animate-pulse group-aria-busy:bg-gray-50 [&_svg]:h-full [&_svg]:w-full"
 				><span class="text-2xl group-aria-busy:hidden">;(</span></div>
 			</div>
 			<figcaption
-				class="h-9 border-t border-accent-2 font-mono text-xs group-data-[display-rows='2']:h-18 group-data-[variant=cutoff]:border-accent"
+				class="h-9 border-t border-accent-2 font-mono text-xs group-data-[display-rows='2']:h-18 group-data-[display-rows='3']:h-27 group-data-[variant=cutoff]:border-accent"
 			>
-				<div class="flex h-[35px] items-center gap-2 px-2">
-					<span data-name class="min-w-0 flex-1 truncate"></span>
-					<span data-value class="shrink-0 tabular-nums text-gray-600"></span>
-				</div>
-				<div class="hidden h-9 items-center gap-2 px-2 group-data-[display-rows='2']:flex">
-					<span data-extra-name class="min-w-0 flex-1 truncate"></span>
-					<span data-extra-value class="shrink-0 tabular-nums text-gray-600"></span>
-				</div>
+				{[
+					'flex h-[35px]',
+					"hidden h-9 group-data-[display-rows='2']:flex group-data-[display-rows='3']:flex",
+					"hidden h-9 group-data-[display-rows='3']:flex",
+				].map((rowClass, row) => (
+					<div class:list={['items-center gap-2 px-2', rowClass]}>
+						<span data-card-value={row * 2} class="min-w-0 flex-1 truncate"></span>
+						<span data-card-value={row * 2 + 1} class="shrink-0 tabular-nums text-gray-600"></span>
+					</div>
+				))}
 			</figcaption>
 		</figure>
 	</li>

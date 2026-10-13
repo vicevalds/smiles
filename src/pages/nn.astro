@@ -35,7 +35,7 @@ import { NEIGHBOR_EXAMPLE } from '@/scripts/lib/examples'
 			id="gallery-section"
 			aria-labelledby="gallery-title"
 			data-columns="5"
-			class="nn-gallery grid h-[calc(100vh-6rem)] gap-4 overflow-hidden pl-4"
+			class="grid [--column-count:attr(data-columns_type(<number>),5)] grid-cols-[repeat(var(--column-count),minmax(0,1fr))] h-[calc(100vh-6rem)] gap-4 overflow-hidden pl-4"
 		>
 			<h1 id="gallery-title" class="sr-only">Nearest-neighbor molecules</h1>
 			<ul id="query-card" class="self-start"></ul>

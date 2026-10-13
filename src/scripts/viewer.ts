@@ -1,4 +1,5 @@
-import * as d3 from 'd3'
+import { renderLineChart, STAT_ORDER, STAT_LABELS, type StatMode, type ChartEntry } from './lib/line-chart'
+import { renderHistogram } from './lib/histogram'
 import { bindColumnFilters } from './lib/column-filters'
 import { parseDelimitedLine, readRows } from './lib/csv'
 import { bindDisplayValues } from './lib/display-values'
@@ -43,7 +44,6 @@ const initializeViewer = () => {
 	const graphsList = document.querySelector<HTMLUListElement>('#graphs')
 	const chartTemplate = document.querySelector<HTMLTemplateElement>('#chart-template')
 	const creatorTemplate = document.querySelector<HTMLTemplateElement>('#creator-template')
-	const plotEmptyTemplate = document.querySelector<HTMLTemplateElement>('#plot-empty-template')
 	const stepSlicer = document.querySelector<HTMLDivElement>('#step-slicer')!
 	const stepRange = document.querySelector<HTMLInputElement>('#step-range')!
 	const stepInput = document.querySelector<HTMLInputElement>('#step-input')!
@@ -197,7 +197,7 @@ const initializeViewer = () => {
 	const buildCard = (index: number) => {
 		const item = items[index]
 		const card = cardTemplate.content.firstElementChild!.cloneNode(true) as HTMLLIElement
-		if (display.slots[2] !== null) card.dataset.displayRows = '2'
+		card.dataset.displayRows = display.rowCount
 		card.setAttribute('aria-busy', 'true')
 		const svgEl = card.querySelector<HTMLElement>('[data-svg]')
 		if (svgEl) {
@@ -323,7 +323,7 @@ const initializeViewer = () => {
 
 	const renderGallery = () => {
 		galleryVersion++
-		gallery.dataset.cardRows = display.slots[2] === null ? '1' : '2'
+		gallery.dataset.cardRows = display.rowCount
 		lazyCards = []
 		cardObserver?.disconnect()
 		const fragment = document.createDocumentFragment()
@@ -436,25 +436,14 @@ const initializeViewer = () => {
 		currentStepIndex = 0
 	}
 
-	type StatMode = 'medoid' | 'mean' | 'max' | 'min'
-	const STAT_ORDER: StatMode[] = ['mean', 'max', 'min', 'medoid']
-	const STAT_LABELS: Record<StatMode, string> = {
-		medoid: 'Medoid',
-		mean: 'Mean',
-		max: 'Max',
-		min: 'Min',
-	}
-
-	type StepStat = { x: number; mean: number; sd: number; max: number; min: number; medoid: number }
-
-	const hasReportedSmilesError = (item: Entry) => {
+	const hasReportedSmilesError = (item: ChartEntry) => {
 		if (!smilesStateColumn) return false
 		const state = (item.props[smilesStateColumn] ?? '').trim().toLowerCase()
 		if (!state) return false
 		return !['1', 'true', 'valid', 'success'].includes(state)
 	}
 
-	const hasInvalidSmiles = (item: Entry) => {
+	const hasInvalidSmiles = (item: ChartEntry) => {
 		if (hasReportedSmilesError(item)) return true
 		const cached = smilesValidityCache.get(item.smiles)
 		if (cached !== undefined) return !cached
@@ -474,220 +463,38 @@ const initializeViewer = () => {
 		}
 	}
 
-	const renderChart = (
-		plot: HTMLElement,
-		xCol: string,
-		yCol: string,
-		stat: StatMode,
-		omitAllZerosInMin = false,
-	) => {
-		const rows: { x: number; y: number }[] = []
-		for (const item of items) {
-			const x = parseFloat((item.props[xCol] ?? '').trim())
-			const y = parseFloat((item.props[yCol] ?? '').trim())
-			if (!Number.isFinite(x) || !Number.isFinite(y)) continue
-			if (
-				stat === 'min' &&
-				y === 0 &&
-				(omitAllZerosInMin || hasInvalidSmiles(item))
-			)
-				continue
-			rows.push({ x, y })
-		}
-		if (rows.length === 0) {
-			plot.replaceChildren(plotEmptyTemplate!.content.firstElementChild!.cloneNode(true))
-			return
-		}
-
-		const byX = new Map<number, number[]>()
-		for (const r of rows) {
-			const arr = byX.get(r.x)
-			if (arr) arr.push(r.y)
-			else byX.set(r.x, [r.y])
-		}
-		const stats: StepStat[] = [...byX.entries()]
-			.map(([x, ys]) => {
-				const n = ys.length
-				const mean = ys.reduce((s, v) => s + v, 0) / n
-				const variance = ys.reduce((s, v) => s + (v - mean) ** 2, 0) / n
-				const max = ys.reduce((s, v) => Math.max(s, v), -Infinity)
-				const min = ys.reduce((s, v) => Math.min(s, v), Infinity)
-				const sorted = [...ys].sort((a, b) => a - b)
-				const mid = Math.floor(n / 2)
-				const median = n % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
-				const medoid = ys.reduce(
-					(best, v) => (Math.abs(v - median) < Math.abs(best - median) ? v : best),
-					ys[0],
-				)
-				return { x, mean, sd: Math.sqrt(Math.max(0, variance)), max, min, medoid }
-			})
-			.sort((a, b) => a.x - b.x)
-
-		const statValue = (d: StepStat) => d[stat]
-
-		const W = 360
-		const H = 280
-		const m = { top: 12, right: 18, bottom: 46, left: 58 }
-		const iw = W - m.left - m.right
-		const ih = H - m.top - m.bottom
-
-		const x = d3
-			.scaleLinear()
-			.domain(d3.extent(stats, (d: StepStat) => d.x))
-			.nice()
-			.range([0, iw])
-		const y = d3
-			.scaleLinear()
-			.domain([
-				d3.min(stats, (d: StepStat) => statValue(d) - d.sd),
-				d3.max(stats, (d: StepStat) => statValue(d) + d.sd),
-			])
-			.nice()
-			.range([ih, 0])
-
-		const svg = d3
-			.create('svg')
-			.attr('viewBox', `0 0 ${W} ${H}`)
-			.attr('class', 'chart-root')
-		const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`)
-
-		g.append('g').attr('transform', `translate(0,${ih})`).call(d3.axisBottom(x).ticks(6))
-		g.append('g').call(d3.axisLeft(y).ticks(6))
-
-		const band = d3
-			.area()
-			.x((d: StepStat) => x(d.x))
-			.y0((d: StepStat) => y(statValue(d) - d.sd))
-			.y1((d: StepStat) => y(statValue(d) + d.sd))
-		g.append('path')
-			.datum(stats)
-			.attr('class', 'chart-band')
-			.attr('d', band)
-
-		const line = d3
-			.line()
-			.x((d: StepStat) => x(d.x))
-			.y((d: StepStat) => y(statValue(d)))
-		g.append('path')
-			.datum(stats)
-			.attr('class', 'chart-line')
-			.attr('d', line)
-		g.selectAll('circle')
-			.data(stats)
-			.join('circle')
-			.attr('cx', (d: StepStat) => x(d.x))
-			.attr('cy', (d: StepStat) => y(statValue(d)))
-			.attr('class', 'chart-point')
-
-		svg
-			.append('text')
-			.attr('x', m.left + iw / 2)
-			.attr('y', H - 8)
-			.attr('text-anchor', 'middle')
-			.attr('data-axis-label', '')
-			.text(xCol)
-		svg
-			.append('text')
-			.attr('transform', 'rotate(-90)')
-			.attr('x', -(m.top + ih / 2))
-			.attr('y', 15)
-			.attr('text-anchor', 'middle')
-			.attr('data-axis-label', '')
-			.text(yCol)
-
-		const focus = g.append('g').attr('data-chart-hover', '').attr('data-visible', 'false')
-		const crossV = focus
-			.append('line')
-			.attr('class', 'chart-crosshair')
-		const crossH = focus
-			.append('line')
-			.attr('class', 'chart-crosshair')
-		const hoverDot = focus
-			.append('circle')
-			.attr('class', 'chart-hover-point')
-
-		const tip = svg.append('g').attr('data-chart-tip-box', '').attr('data-visible', 'false')
-		const tipBg = tip
-			.append('rect')
-			.attr('class', 'chart-tooltip-bg')
-		const tipText = tip.append('text').attr('data-chart-tip', '')
-
-		const bisect = d3.bisector((d: StepStat) => d.x).center
-		const fmt = (n: number) => (Number.isInteger(n) ? String(n) : String(+n.toFixed(3)))
-
-		const overlay = g
-			.append('rect')
-			.attr('width', iw)
-			.attr('height', ih)
-			.attr('data-chart-overlay', '')
-
-		const hideHover = () => {
-			focus.attr('data-visible', 'false')
-			tip.attr('data-visible', 'false')
-		}
-		overlay.on('mouseleave', hideHover)
-		overlay.on('mousemove', (event: MouseEvent) => {
-			const [mx] = d3.pointer(event)
-			const d = stats[bisect(stats, x.invert(mx))] as StepStat | undefined
-			if (!d || Math.abs(x(d.x) - mx) > 18) {
-				hideHover()
-				return
-			}
-			const sx = x(d.x)
-			const sy = y(statValue(d))
-
-			crossV.attr('x1', sx).attr('y1', sy).attr('x2', sx).attr('y2', ih)
-			crossH.attr('x1', 0).attr('y1', sy).attr('x2', sx).attr('y2', sy)
-			hoverDot.attr('cx', sx).attr('cy', sy)
-			focus.attr('data-visible', 'true')
-
-			tipText.selectAll('tspan').remove()
-			tipText.append('tspan').attr('x', 6).attr('y', 13).text(`${xCol}: ${fmt(d.x)}`)
-			tipText
-				.append('tspan')
-				.attr('x', 6)
-				.attr('y', 25)
-				.text(`${STAT_LABELS[stat]}: ${fmt(statValue(d))}`)
-			tip.attr('data-visible', 'true')
-			const bb = (tipText.node() as SVGTextElement).getBBox()
-			const boxW = bb.width + 12
-			const boxH = bb.height + 10
-			tipBg.attr('width', boxW).attr('height', boxH)
-			let gx = m.left + sx + 12
-			let gy = m.top + sy - boxH - 8
-			if (gx + boxW > W) gx = m.left + sx - boxW - 12
-			if (gy < 0) gy = m.top + sy + 12
-			tip.attr('transform', `translate(${gx},${gy})`)
-		})
-
-		plot.replaceChildren(svg.node())
-	}
-
 	const makeChart = (xCol: string, yCol: string, omitAllZerosInMin = false) => {
 		const li = chartTemplate!.content.firstElementChild!.cloneNode(true) as HTMLLIElement
 		li.dataset.x = xCol
 		li.dataset.y = yCol
 		li.dataset.statMode = 'mean'
 		li.dataset.omitAllZerosInMin = String(omitAllZerosInMin)
-		const title = `${yCol} vs ${xCol}`
+		const title = reinventMode ? `${yCol} vs ${xCol}` : `Histogram of ${xCol}`
 		const titleEl = li.querySelector<HTMLElement>('[data-title]')!
 		titleEl.textContent = title
 		titleEl.title = title
 		li.querySelector<HTMLButtonElement>('[data-remove]')?.addEventListener('click', () => {
 			li.remove()
 		})
-		renderChart(
+		if (!reinventMode) {
+			li.querySelector('[data-stat]')?.remove()
+			renderHistogram(li.querySelector<HTMLElement>('[data-plot]')!, xCol, items.map((item) => displayValue(item, xCol)))
+			return li
+		}
+		renderLineChart(
 			li.querySelector<HTMLElement>('[data-plot]')!,
 			xCol,
 			yCol,
 			'mean',
+			items,
+			hasInvalidSmiles,
 			omitAllZerosInMin,
 		)
 		return li
 	}
 
-	const fillAxisPills = (group: HTMLElement, selected: string | null) => {
-		for (const c of graphColumns) {
+	const fillAxisPills = (group: HTMLElement, selected: string | null, columns = graphColumns) => {
+		for (const c of columns) {
 			const pill = pillTemplate.content.firstElementChild!.cloneNode(true) as HTMLButtonElement
 			pill.dataset.column = c
 			pill.textContent = c
@@ -709,7 +516,7 @@ const initializeViewer = () => {
 
 	const makeCreator = () => {
 		const li = creatorTemplate!.content.firstElementChild!.cloneNode(true) as HTMLLIElement
-		fillAxisPills(li.querySelector<HTMLElement>('[data-y-axis]')!, defaultY)
+		fillAxisPills(li.querySelector<HTMLElement>('[data-y-axis]')!, defaultY, reinventMode ? graphColumns : ['Histogram'])
 		fillAxisPills(li.querySelector<HTMLElement>('[data-x-axis]')!, defaultX)
 		refreshCreateBtn(li)
 		return li
@@ -719,7 +526,7 @@ const initializeViewer = () => {
 		if (!graphsList) return
 		graphsList.replaceChildren()
 		if (graphColumns.length === 0) return
-		if (defaultX && defaultY) {
+		if (reinventMode && defaultX && defaultY) {
 			const isDefaultScoreStep =
 				reinventMode && normalizedColumn(defaultX) === 'step' && normalizedColumn(defaultY) === 'score'
 			graphsList.append(makeChart(defaultX, defaultY, isDefaultScoreStep))
@@ -731,12 +538,13 @@ const initializeViewer = () => {
 
 	const setupGraphs = () => {
 		const cols = items.length ? Object.keys(items[0].props) : []
-		graphColumns = cols.filter((col) => {
+		graphColumns = (reinventMode ? cols : withMolecularMassColumn(cols)).filter((col) => {
+			if (!reinventMode && col === MOLECULAR_MASS_COLUMN) return true
 			let any = false
 			for (const item of items) {
 				const v = (item.props[col] ?? '').trim()
 				if (!v) continue
-				if (!Number.isFinite(parseFloat(v))) return false
+				if (!Number.isFinite(reinventMode ? parseFloat(v) : Number(v))) return false
 				any = true
 			}
 			return any
@@ -745,7 +553,9 @@ const initializeViewer = () => {
 			(stepColumn && graphColumns.includes(stepColumn) ? stepColumn : findCol('step')) ??
 			graphColumns[0] ??
 			null
-		defaultY = findCol('score') ?? graphColumns.find((c) => c !== defaultX) ?? graphColumns[0] ?? null
+		defaultY = reinventMode
+			? findCol('score') ?? graphColumns.find((c) => c !== defaultX) ?? graphColumns[0] ?? null
+			: 'Histogram'
 		buildGraphs()
 	}
 
@@ -785,11 +595,13 @@ const initializeViewer = () => {
 			const next = STAT_ORDER[(STAT_ORDER.indexOf(cur) + 1) % STAT_ORDER.length]
 			li.dataset.statMode = next
 			statBtn.textContent = STAT_LABELS[next]
-			renderChart(
+			renderLineChart(
 				li.querySelector<HTMLElement>('[data-plot]')!,
 				li.dataset.x!,
 				li.dataset.y!,
 				next,
+				items,
+				hasInvalidSmiles,
 				li.dataset.omitAllZerosInMin === 'true',
 			)
 			return
@@ -912,6 +724,7 @@ const initializeViewer = () => {
 
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault()
+		form.dispatchEvent(new CustomEvent('viewer:clean'))
 		const generation = renderGeneration
 		renderBtn.disabled = true
 		clearError()

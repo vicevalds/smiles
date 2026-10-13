@@ -1,4 +1,4 @@
-export type DisplaySlots = [string | null, string | null, string | null, string | null]
+const MAX_DISPLAY_VALUES = 6
 export type SortDirection = 'desc' | 'asc'
 
 export const bindDisplayValues = (
@@ -8,7 +8,7 @@ export const bindDisplayValues = (
 ) => {
 	const options = panel.querySelector<HTMLElement>('#column-options')!
 	const sortButton = panel.querySelector<HTMLButtonElement>('#sort-btn')!
-	let slots: DisplaySlots = [null, null, null, null]
+	let slots: (string | null)[] = Array(MAX_DISPLAY_VALUES).fill(null)
 	let sortedColumn: string | null = null
 	let sortDirection: SortDirection = 'desc'
 	let hasColumns = false
@@ -58,6 +58,9 @@ export const bindDisplayValues = (
 		get slots() {
 			return slots
 		},
+		get rowCount() {
+			return String(Math.max(1, Math.ceil(slots.filter((column) => column !== null).length / 2)))
+		},
 		get sortedColumn() {
 			return sortedColumn
 		},
@@ -69,7 +72,8 @@ export const bindDisplayValues = (
 		},
 		populate(columns: string[], defaultColumn: string | null = null) {
 			hasColumns = columns.length > 0
-			slots = [columns.includes(defaultColumn ?? '') ? defaultColumn : null, null, null, null]
+			slots = Array(MAX_DISPLAY_VALUES).fill(null)
+			slots[0] = columns.includes(defaultColumn ?? '') ? defaultColumn : null
 			sortedColumn = slots[0]
 			sortDirection = 'desc'
 			options.replaceChildren()
