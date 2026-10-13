@@ -270,6 +270,9 @@ const initializeNNViewer = () => {
 		}
 		requestAnimationFrame(renderBatch)
 	}
+	gallery.addEventListener('camera:hydrate', (event) => {
+		for (const card of (event as CustomEvent<HTMLLIElement[]>).detail) paintCardSvg(card)
+	})
 
 	const displayValue = (neighbor: Neighbor, column: string, resolveComputed = true) =>
 		column === MOLECULAR_MASS_COLUMN
@@ -407,6 +410,7 @@ const initializeNNViewer = () => {
 				false,
 				'neighbor',
 			)
+			card.dataset.itemIndex = String(neighbor.index)
 			cards.push(card)
 			fragment.append(card)
 		}
@@ -431,6 +435,7 @@ const initializeNNViewer = () => {
 	}
 
 	const clearViewer = () => {
+		gallery.dispatchEvent(new Event('camera:reset'))
 		queryGroups = []
 		activeNeighbors = []
 		currentQueryIndex = 0
@@ -454,6 +459,7 @@ const initializeNNViewer = () => {
 		if (!text) throw new Error('Paste CSV/TSV text or upload a .csv/.tsv file.')
 
 		const parsed = parseInput(text)
+		gallery.dispatchEvent(new Event('camera:reset'))
 		queryGroups = buildGroups(parsed.rows)
 		currentQueryIndex = 0
 		currentQueryKey = null

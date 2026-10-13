@@ -1,0 +1,14 @@
+---
+import CameraButton from '@/components/CameraButton.astro'
+---
+
+<li class="flex items-center gap-2">
+	<button id="camera-mode-toggle" type="button" aria-pressed="false" class="cursor-pointer font-semibold text-gray-400 transition-colors hover:text-black aria-pressed:text-black">Camera Mode</button>
+	<span id="camera-controls" class="ml-auto inline-flex items-center gap-2 hidden:hidden" hidden>
+		<CameraButton id="camera-export" icon="camera" label="Export first three rows as PNG" />
+		<CameraButton id="camera-visibility" label="Hide marked cells" />
+		<span id="camera-status" class="sr-only" role="status"></span>
+	</span>
+</li>
+
+<script src="@/scripts/camera-loader.ts"></script>

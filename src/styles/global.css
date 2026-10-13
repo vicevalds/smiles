@@ -56,15 +56,6 @@
   scrollbar-gutter: stable;
 }
 
-.molecule-card {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 260px;
-}
-
-.molecule-card[data-display-rows='2'] {
-  contain-intrinsic-size: auto 296px;
-}
-
 #gallery-section[data-gallery-rows] {
   --visible-row-count: attr(data-gallery-rows type(<number>), 3);
 }

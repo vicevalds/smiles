@@ -1,4 +1,5 @@
 ---
+import CameraButton from '@/components/CameraButton.astro'
 import CopyButton from '@/components/CopyButton.astro'
 
 interface Props {
@@ -15,8 +16,9 @@ const {
 <template id="card-template">
 	<li
 		class:list={[
-			'group flex flex-col overflow-hidden border-2 border-accent-2 data-[variant=cutoff]:border-accent data-[variant=query]:border-accent-2',
-			virtualized && 'molecule-card',
+			'group flex flex-col overflow-hidden border-2 border-accent-2 data-[variant=cutoff]:border-accent',
+			'hidden:hidden [&[draggable=true]]:cursor-grab data-[camera-marked=true]:border-dashed data-[dragging=true]:cursor-grabbing data-[dragging=true]:opacity-40 data-[camera-export=true]:[content-visibility:visible]',
+			virtualized && '[content-visibility:auto] [contain-intrinsic-size:auto_260px] data-[display-rows=2]:[contain-intrinsic-size:auto_296px]',
 		]}
 	>
 		<figure class="flex flex-col">
@@ -36,13 +38,14 @@ const {
 					hidden
 				></span>
 				<CopyButton data-copy-smiles class="absolute right-1 top-1 z-10" hidden />
+				<CameraButton data-camera-eye label="Mark cell to hide" class="absolute right-1 top-[26px] z-10 border border-accent-2 bg-white p-px" hidden />
 				<div
 					data-svg
 					class="flex h-full w-full items-center justify-center p-1 group-aria-busy:animate-pulse group-aria-busy:bg-gray-50 [&_svg]:h-full [&_svg]:w-full"
 				><span class="text-2xl group-aria-busy:hidden">;(</span></div>
 			</div>
 			<figcaption
-				class="h-9 border-t border-accent-2 font-mono text-xs group-data-[display-rows='2']:h-18 group-data-[variant=cutoff]:border-accent group-data-[variant=query]:border-accent-2"
+				class="h-9 border-t border-accent-2 font-mono text-xs group-data-[display-rows='2']:h-18 group-data-[variant=cutoff]:border-accent"
 			>
 				<div class="flex h-[35px] items-center gap-2 px-2">
 					<span data-name class="min-w-0 flex-1 truncate"></span>

@@ -291,6 +291,11 @@ const initializeViewer = () => {
 		}, { rootMargin: '700px 0px' })
 
 	gallery.addEventListener('click', createCopyHandler())
+	gallery.addEventListener('camera:hydrate', (event) => {
+		for (const card of (event as CustomEvent<HTMLLIElement[]>).detail) {
+			if (card.dataset.lazy === 'true') hydrateCard({ card, index: Number(card.dataset.itemIndex), version: galleryVersion })
+		}
+	})
 
 	const computeOrder = (): number[] => {
 		const base = items.map((_, i) => i)
@@ -836,6 +841,7 @@ const initializeViewer = () => {
 	}
 
 	const renderInput = async (text: string) => {
+		gallery.dispatchEvent(new Event('camera:reset'))
 		const generation = ++renderGeneration
 		renderBtn.disabled = true
 		const parsed = parseInput(text)
@@ -933,6 +939,7 @@ const initializeViewer = () => {
 	})
 
 	form.addEventListener('viewer:clean', () => {
+		gallery.dispatchEvent(new Event('camera:reset'))
 		renderGeneration++
 		galleryVersion++
 		lazyCards = []
