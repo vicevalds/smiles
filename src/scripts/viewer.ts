@@ -1,5 +1,5 @@
-import { renderLineChart, STAT_ORDER, STAT_LABELS, type StatMode, type ChartEntry } from './lib/line-chart'
-import { renderHistogram } from './lib/histogram'
+import type { ChartEntry } from './lib/line-chart'
+import { bindGraphs } from './lib/graphs'
 import { bindColumnFilters } from './lib/column-filters'
 import { parseDelimitedLine, readRows } from './lib/csv'
 import { bindDisplayValues } from './lib/display-values'
@@ -41,9 +41,6 @@ const initializeViewer = () => {
 	const viewToggle = document.querySelector<HTMLElement>('#view-toggle')
 	const gallerySection = document.querySelector<HTMLElement>('#gallery-section')!
 	const graphsSection = document.querySelector<HTMLElement>('#graphs-section')
-	const graphsList = document.querySelector<HTMLUListElement>('#graphs')
-	const chartTemplate = document.querySelector<HTMLTemplateElement>('#chart-template')
-	const creatorTemplate = document.querySelector<HTMLTemplateElement>('#creator-template')
 	const stepSlicer = document.querySelector<HTMLDivElement>('#step-slicer')!
 	const stepRange = document.querySelector<HTMLInputElement>('#step-range')!
 	const stepInput = document.querySelector<HTMLInputElement>('#step-input')!
@@ -166,9 +163,6 @@ const initializeViewer = () => {
 	let currentStepIndex = 0
 
 	let view: 'viewer' | 'graphs' = 'viewer'
-	let graphColumns: string[] = []
-	let defaultX: string | null = null
-	let defaultY: string | null = null
 
 	const displayValue = (item: Entry, column: string, resolveComputed = true) =>
 		column === MOLECULAR_MASS_COLUMN
@@ -463,151 +457,7 @@ const initializeViewer = () => {
 		}
 	}
 
-	const makeChart = (xCol: string, yCol: string, omitAllZerosInMin = false) => {
-		const li = chartTemplate!.content.firstElementChild!.cloneNode(true) as HTMLLIElement
-		li.dataset.x = xCol
-		li.dataset.y = yCol
-		li.dataset.statMode = 'mean'
-		li.dataset.omitAllZerosInMin = String(omitAllZerosInMin)
-		const title = reinventMode ? `${yCol} vs ${xCol}` : `Histogram of ${xCol}`
-		const titleEl = li.querySelector<HTMLElement>('[data-title]')!
-		titleEl.textContent = title
-		titleEl.title = title
-		li.querySelector<HTMLButtonElement>('[data-remove]')?.addEventListener('click', () => {
-			li.remove()
-		})
-		if (!reinventMode) {
-			li.querySelector('[data-stat]')?.remove()
-			renderHistogram(li.querySelector<HTMLElement>('[data-plot]')!, xCol, items.map((item) => displayValue(item, xCol)))
-			return li
-		}
-		renderLineChart(
-			li.querySelector<HTMLElement>('[data-plot]')!,
-			xCol,
-			yCol,
-			'mean',
-			items,
-			hasInvalidSmiles,
-			omitAllZerosInMin,
-		)
-		return li
-	}
-
-	const fillAxisPills = (group: HTMLElement, selected: string | null, columns = graphColumns) => {
-		for (const c of columns) {
-			const pill = pillTemplate.content.firstElementChild!.cloneNode(true) as HTMLButtonElement
-			pill.dataset.column = c
-			pill.textContent = c
-			const isSelected = c === selected
-			if (isSelected) pill.dataset.slot = '0'
-			pill.setAttribute('aria-pressed', String(isSelected))
-			group.append(pill)
-		}
-	}
-
-	const axisValue = (group: HTMLElement) =>
-		group.querySelector<HTMLElement>('[data-slot]')?.dataset.column ?? null
-
-	const refreshCreateBtn = (creator: HTMLElement) => {
-		const y = axisValue(creator.querySelector<HTMLElement>('[data-y-axis]')!)
-		const x = axisValue(creator.querySelector<HTMLElement>('[data-x-axis]')!)
-		creator.querySelector<HTMLButtonElement>('[data-create]')!.disabled = !(x && y)
-	}
-
-	const makeCreator = () => {
-		const li = creatorTemplate!.content.firstElementChild!.cloneNode(true) as HTMLLIElement
-		fillAxisPills(li.querySelector<HTMLElement>('[data-y-axis]')!, defaultY, reinventMode ? graphColumns : ['Histogram'])
-		fillAxisPills(li.querySelector<HTMLElement>('[data-x-axis]')!, defaultX)
-		refreshCreateBtn(li)
-		return li
-	}
-
-	const buildGraphs = () => {
-		if (!graphsList) return
-		graphsList.replaceChildren()
-		if (graphColumns.length === 0) return
-		if (reinventMode && defaultX && defaultY) {
-			const isDefaultScoreStep =
-				reinventMode && normalizedColumn(defaultX) === 'step' && normalizedColumn(defaultY) === 'score'
-			graphsList.append(makeChart(defaultX, defaultY, isDefaultScoreStep))
-		}
-		graphsList.append(makeCreator())
-	}
-
-	const findCol = (name: string) => graphColumns.find((c) => c.toLowerCase() === name) ?? null
-
-	const setupGraphs = () => {
-		const cols = items.length ? Object.keys(items[0].props) : []
-		graphColumns = (reinventMode ? cols : withMolecularMassColumn(cols)).filter((col) => {
-			if (!reinventMode && col === MOLECULAR_MASS_COLUMN) return true
-			let any = false
-			for (const item of items) {
-				const v = (item.props[col] ?? '').trim()
-				if (!v) continue
-				if (!Number.isFinite(reinventMode ? parseFloat(v) : Number(v))) return false
-				any = true
-			}
-			return any
-		})
-		defaultX =
-			(stepColumn && graphColumns.includes(stepColumn) ? stepColumn : findCol('step')) ??
-			graphColumns[0] ??
-			null
-		defaultY = reinventMode
-			? findCol('score') ?? graphColumns.find((c) => c !== defaultX) ?? graphColumns[0] ?? null
-			: 'Histogram'
-		buildGraphs()
-	}
-
-	graphsList?.addEventListener('click', (event) => {
-		const target = event.target as HTMLElement
-
-		const pill = target.closest<HTMLButtonElement>('[data-column]')
-		if (pill) {
-			const group = pill.closest<HTMLElement>('[data-x-axis], [data-y-axis]')!
-			const wasSelected = pill.dataset.slot !== undefined
-			group.querySelectorAll<HTMLElement>('[data-column]').forEach((p) => {
-				delete p.dataset.slot
-				p.setAttribute('aria-pressed', 'false')
-			})
-			if (!wasSelected) {
-				pill.dataset.slot = '0'
-				pill.setAttribute('aria-pressed', 'true')
-			}
-			refreshCreateBtn(pill.closest<HTMLElement>('[data-creator]')!)
-			return
-		}
-
-		if (target.closest('[data-create]')) {
-			const creator = target.closest<HTMLLIElement>('[data-creator]')!
-			const x = axisValue(creator.querySelector<HTMLElement>('[data-x-axis]')!)
-			const y = axisValue(creator.querySelector<HTMLElement>('[data-y-axis]')!)
-			if (!x || !y) return
-			creator.replaceWith(makeChart(x, y))
-			graphsList!.append(makeCreator())
-			return
-		}
-
-		const statBtn = target.closest<HTMLButtonElement>('button[data-stat]')
-		if (statBtn) {
-			const li = statBtn.closest<HTMLLIElement>('li')!
-			const cur = (li.dataset.statMode as StatMode) ?? 'mean'
-			const next = STAT_ORDER[(STAT_ORDER.indexOf(cur) + 1) % STAT_ORDER.length]
-			li.dataset.statMode = next
-			statBtn.textContent = STAT_LABELS[next]
-			renderLineChart(
-				li.querySelector<HTMLElement>('[data-plot]')!,
-				li.dataset.x!,
-				li.dataset.y!,
-				next,
-				items,
-				hasInvalidSmiles,
-				li.dataset.omitAllZerosInMin === 'true',
-			)
-			return
-		}
-
-	})
+	const graphs = bindGraphs<Entry>({ reinventMode, displayValue, hasInvalidSmiles })
 
 	const applyView = () => {
 		const graphs = view === 'graphs'
@@ -673,8 +523,7 @@ const initializeViewer = () => {
 		populatePanel([])
 		columnFilters.populate([])
 		populateSetId([])
-		graphColumns = []
-		buildGraphs()
+		graphs.clear()
 		applyView()
 
 		if (parsed.entries.length === 0) {
@@ -714,7 +563,7 @@ const initializeViewer = () => {
 		columnFilters.populate(withMolecularMassColumn(parsed.columns))
 		populateSetId(parsed.columns)
 		setupStepSlicer()
-		setupGraphs()
+		graphs.populate(items, stepColumn)
 		applyView()
 		recompute()
 		columnsPanel.hidden = false
@@ -767,9 +616,8 @@ const initializeViewer = () => {
 		smilesStateColumn = null
 		steps = []
 		currentStepIndex = 0
-		graphColumns = []
 		view = 'viewer'
-		buildGraphs()
+		graphs.clear()
 		columnsPanel.hidden = true
 		clearError()
 		clearStatus()

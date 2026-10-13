@@ -1,6 +1,5 @@
 import * as d3 from 'd3'
-import { createChartTooltip } from './chart-tooltip'
-import { showEmptyPlot } from './plot'
+import { createPlot, showEmptyPlot, PLOT_MARGIN as m, PLOT_INNER_WIDTH as iw, PLOT_INNER_HEIGHT as ih } from './plot'
 
 export type ChartEntry = { smiles: string; props: Record<string, string> }
 
@@ -68,12 +67,6 @@ export const renderLineChart = (
 
 	const statValue = (d: StepStat) => d[stat]
 
-	const W = 360
-	const H = 280
-	const m = { top: 12, right: 18, bottom: 46, left: 58 }
-	const iw = W - m.left - m.right
-	const ih = H - m.top - m.bottom
-
 	const x = d3
 		.scaleLinear()
 		.domain(d3.extent(stats, (d: StepStat) => d.x))
@@ -88,11 +81,7 @@ export const renderLineChart = (
 		.nice()
 		.range([ih, 0])
 
-	const svg = d3
-		.create('svg')
-		.attr('viewBox', `0 0 ${W} ${H}`)
-		.attr('class', 'chart-root')
-	const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`)
+	const { svg, g, tooltip } = createPlot(xCol, yCol)
 
 	g.append('g').attr('transform', `translate(0,${ih})`).call(d3.axisBottom(x).ticks(6))
 	g.append('g').call(d3.axisLeft(y).ticks(6))
@@ -122,22 +111,6 @@ export const renderLineChart = (
 		.attr('cy', (d: StepStat) => y(statValue(d)))
 		.attr('class', 'chart-point')
 
-	svg
-		.append('text')
-		.attr('x', m.left + iw / 2)
-		.attr('y', H - 8)
-		.attr('text-anchor', 'middle')
-		.attr('data-axis-label', '')
-		.text(xCol)
-	svg
-		.append('text')
-		.attr('transform', 'rotate(-90)')
-		.attr('x', -(m.top + ih / 2))
-		.attr('y', 15)
-		.attr('text-anchor', 'middle')
-		.attr('data-axis-label', '')
-		.text(yCol)
-
 	const focus = g.append('g').attr('data-chart-hover', '').attr('data-visible', 'false')
 	const crossV = focus
 		.append('line')
@@ -148,8 +121,6 @@ export const renderLineChart = (
 	const hoverDot = focus
 		.append('circle')
 		.attr('class', 'chart-hover-point')
-
-	const tooltip = createChartTooltip(svg.node()!, W, H)
 
 	const bisect = d3.bisector((d: StepStat) => d.x).center
 	const fmt = (n: number) => (Number.isInteger(n) ? String(n) : String(+n.toFixed(3)))

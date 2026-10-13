@@ -5,7 +5,7 @@ import PillButton from '@/components/PillButton.astro'
 ---
 
 <template id="chart-template">
-	<li class="flex flex-col overflow-hidden border-2 border-accent-2">
+	<li class="overflow-hidden border-2 border-accent-2">
 		<div class="flex items-center justify-between gap-2 border-b border-accent-2 p-2">
 			<span data-title class="min-w-0 flex-1 truncate font-mono text-xs"></span>
 			<PillButton data-stat aria-label="Cycle statistic" grow={false} padded={false} class="w-[calc(6ch+1rem)] shrink-0 px-1.5 font-mono text-xs leading-none">
@@ -36,7 +36,7 @@ import PillButton from '@/components/PillButton.astro'
 </template>
 
 <template id="creator-template">
-	<li data-creator class="flex aspect-[9/8] min-h-80 w-full flex-col gap-2 overflow-hidden border-2 border-dashed border-gray-300 p-3 [contain:size]">
+	<li data-creator class="flex aspect-[9/8] min-h-80 flex-col gap-2 overflow-hidden border-2 border-dashed border-gray-300 p-3 [contain:size]">
 		<GraphAxis axis="y" />
 		<GraphAxis axis="x" />
 		<ActionButton data-create disabled class="shrink-0">Create</ActionButton>
