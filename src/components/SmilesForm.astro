@@ -3,6 +3,7 @@ import ActionButton from '@/components/ActionButton.astro'
 import FormGroup from '@/components/FormGroup.astro'
 import PillButton from '@/components/PillButton.astro'
 import RangeInput from '@/components/RangeInput.astro'
+import SmilesColumnSelect from '@/components/SmilesColumnSelect.astro'
 
 type Props = {
 	placeholderSmiles: string
@@ -43,14 +44,17 @@ const {
 
 		<FormGroup class="transition-opacity duration-150 ease-out motion-reduce:transition-none group-data-[dragging=true]/drop-zone:opacity-0">
 			<label for="smiles-file" class="font-semibold">{uploadLabel}</label>
-			<input
-				id="smiles-file"
-				name="smiles-file"
-				type="file"
-				accept={fileAccept}
-				class="w-full border-2 hover:cursor-pointer hover:file:cursor-pointer border-accent file:p-1 file:bg-accent
-				file:text-black text-gray-500 hover:file:bg-white file:border-r-2 file:border-accent"
-			/>
+			<div>
+				<input
+					id="smiles-file"
+					name="smiles-file"
+					type="file"
+					accept={fileAccept}
+					class="w-full border-2 hover:cursor-pointer hover:file:cursor-pointer border-accent file:p-1 file:bg-accent
+					file:text-black text-gray-500 hover:file:bg-white file:border-r-2 file:border-accent"
+				/>
+				<SmilesColumnSelect />
+			</div>
 		</FormGroup>
 		<div
 			aria-hidden="true"

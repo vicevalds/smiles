@@ -13,6 +13,7 @@ import {
 	withMolecularMassColumn,
 } from './lib/molecular-mass'
 import { getSharedViewerInput, setSharedViewerInput } from './lib/viewer-input'
+import { bindSmilesColumn } from './lib/smiles-column'
 
 const initializeViewer = () => {
 	const viewerRoot = document.querySelector<HTMLElement>('[data-viewer-mode]')
@@ -212,13 +213,6 @@ const initializeViewer = () => {
 	let lazyCards: LazyCard[] = []
 	let lazyFlushScheduled = false
 
-	const distanceFromViewport = ({ card }: LazyCard) => {
-		const rect = card.getBoundingClientRect()
-		if (rect.bottom < 0) return -rect.bottom
-		if (rect.top > window.innerHeight) return rect.top - window.innerHeight
-		return 0
-	}
-
 	const hydrateCard = ({ card, index, version }: LazyCard) => {
 		if (version !== galleryVersion || !card.isConnected) return
 		const svgEl = card.querySelector<HTMLElement>('[data-svg]')
@@ -239,9 +233,6 @@ const initializeViewer = () => {
 		let rendered = 0
 
 		while (lazyCards.length > 0) {
-			if (cardObserver) {
-				lazyCards.sort((a, b) => distanceFromViewport(a) - distanceFromViewport(b))
-			}
 			const next = lazyCards.shift()!
 			hydrateCard(next)
 			rendered++
@@ -571,6 +562,12 @@ const initializeViewer = () => {
 		return true
 	}
 
+	const renderAndSave = async (text: string) => {
+		clearError()
+		if (await renderInput(text)) setSharedViewerInput(text)
+	}
+	const requestSmilesColumn = bindSmilesColumn(form, renderAndSave)
+
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault()
 		form.dispatchEvent(new CustomEvent('viewer:clean'))
@@ -597,7 +594,15 @@ const initializeViewer = () => {
 		}
 		if (generation !== renderGeneration) return
 
-		if (await renderInput(text)) setSharedViewerInput(text)
+		if (file && isAllowedFile(file, ['.csv', '.tsv'])) {
+			const delimiter = file.name.toLowerCase().endsWith('.tsv') ? '\t' : ','
+			if (requestSmilesColumn(text, delimiter)) {
+				renderBtn.disabled = false
+				return
+			}
+		}
+
+		await renderAndSave(text)
 	})
 
 	form.addEventListener('viewer:clean', () => {
