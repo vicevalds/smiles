@@ -1,5 +1,5 @@
 ---
-import FilterFields from '@/components/FilterFields.astro'
+import PillButton from '@/components/PillButton.astro'
 import UnderlineSelect from '@/components/UnderlineSelect.astro'
 ---
 
@@ -15,8 +15,36 @@ import UnderlineSelect from '@/components/UnderlineSelect.astro'
 			>
 				<option value=""></option>
 			</UnderlineSelect>
-			<div class="flex h-full min-w-0 flex-1 flex-nowrap items-center gap-1">
-				<FilterFields disabled />
+			<div class="flex h-full min-w-0 flex-1 items-center gap-1">
+				<PillButton
+					data-filter-operator
+					aria-label="Filter comparison: greater than"
+					title="Click to switch: >, >=, <, <=, == (value or pattern)"
+					grow={false}
+					padded={false}
+					class="w-12 shrink-0 disabled:cursor-not-allowed disabled:text-gray-400"
+					disabled
+				>&gt;</PillButton>
+				<input
+					data-filter-input
+					type="number"
+					inputmode="decimal"
+					step="any"
+					placeholder="0.0"
+					aria-label="Filter value"
+					class="h-full min-w-0 flex-1 appearance-none border-b-2 border-accent bg-transparent text-right font-semibold tabular-nums text-black placeholder:font-normal placeholder:text-gray-400 disabled:cursor-not-allowed disabled:text-gray-400
+						[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none
+						focus:border-gray-400 focus:outline-none"
+					disabled
+				/>
+				<PillButton
+					data-filter-toggle
+					aria-pressed="false"
+					grow={false}
+					padded={false}
+					class="w-16 shrink-0 disabled:cursor-not-allowed disabled:text-gray-400"
+					disabled
+				>Off</PillButton>
 			</div>
 		</section>
 	</template>

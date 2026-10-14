@@ -12,17 +12,10 @@ type ColumnFilters<T> = {
 }
 
 export const bindColumnFilters = <T>(
-	panel: HTMLElement | null,
+	panel: HTMLElement,
 	onChange: () => void,
 	getValue: (item: T, column: string) => string,
 ): ColumnFilters<T> => {
-	if (!panel) {
-		return {
-			matches: (_item: T) => true,
-			populate: (_columns: string[]) => {},
-		}
-	}
-
 	const list = panel.querySelector<HTMLElement>('#column-filter-list')!
 	const template = panel.querySelector<HTMLTemplateElement>('#column-filter-template')!
 	let columns: string[] = []
@@ -48,8 +41,7 @@ export const bindColumnFilters = <T>(
 
 		select.addEventListener('change', () => {
 			filter.column = select.value || null
-			control.reset()
-			control.setAvailable(filter.column !== null, filter.column ?? 'Filter')
+			control.reset(filter.column)
 
 			if (filter.column === null && filters.some((item) => item !== filter && item.column === null)) {
 				element.remove()
@@ -68,8 +60,7 @@ export const bindColumnFilters = <T>(
 		matches(item: T) {
 			return filters.every((filter) => {
 				if (!filter.control.enabled || !filter.column) return true
-				const value = getValue(item, filter.column).trim()
-				return value !== '' && filter.control.matches(value)
+				return filter.control.matches(getValue(item, filter.column))
 			})
 		},
 		populate(nextColumns: string[]) {

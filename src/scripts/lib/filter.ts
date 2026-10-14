@@ -1,17 +1,17 @@
 export type FilterControl = {
 	readonly enabled: boolean
 	matches: (candidate: number | string) => boolean
-	reset: () => void
-	setAvailable: (available: boolean, label?: string) => void
+	reset: (column: string | null) => void
 }
 
-type Operator = '>' | '<' | '='
-
-const OPERATORS: Operator[] = ['>', '<', '=']
+const OPERATORS = ['>', '>=', '<', '<=', '=='] as const
+type Operator = typeof OPERATORS[number]
 const OPERATOR_LABELS: Record<Operator, string> = {
 	'>': 'greater than',
+	'>=': 'greater than or equal to',
 	'<': 'less than',
-	'=': 'matches value or pattern',
+	'<=': 'less than or equal to',
+	'==': 'matches value or pattern',
 }
 
 export const bindFilter = (
@@ -42,10 +42,11 @@ export const bindFilter = (
 		toggleButton.disabled = !available
 		operatorButton.textContent = operator
 		operatorButton.setAttribute('aria-label', `${label} comparison: ${OPERATOR_LABELS[operator]}`)
-		input.type = operator === '=' ? 'text' : 'number'
-		input.inputMode = operator === '=' ? 'text' : 'decimal'
-		input.placeholder = operator === '=' ? 'Value' : '0.0'
-		input.title = operator === '='
+		const isPattern = operator === '=='
+		input.type = isPattern ? 'text' : 'number'
+		input.inputMode = isPattern ? 'text' : 'decimal'
+		input.placeholder = isPattern ? 'Value' : '0.0'
+		input.title = isPattern
 			? 'Contains text (case-sensitive). . matches any character; * repeats the preceding character zero or more times. Example: ABC.*'
 			: ''
 		input.setAttribute('aria-label', `${label} value`)
@@ -55,9 +56,8 @@ export const bindFilter = (
 
 	const commitInput = () => {
 		const rawValue = input.value.trim()
-		if (operator === '=') {
+		if (operator === '==') {
 			try {
-				// Only . and * retain their regular-expression meaning.
 				pattern = rawValue ? new RegExp(rawValue.replace(/[+?^${}()|[\]\\]/g, '\\$&'), 'u') : null
 				input.setCustomValidity('')
 				return pattern !== null
@@ -79,15 +79,15 @@ export const bindFilter = (
 	}
 
 	const setEnabled = (next: boolean) => {
-		enabled = available && next && (operator === '=' ? pattern !== null : value !== null)
+		enabled = available && next && (operator === '==' ? pattern !== null : value !== null)
 		update()
 	}
 
 	operatorButton.addEventListener('click', () => {
-		const wasText = operator === '='
+		const wasText = operator === '=='
 		const wasEnabled = enabled
 		operator = OPERATORS[(OPERATORS.indexOf(operator) + 1) % OPERATORS.length]
-		if (wasText || operator === '=') {
+		if (wasText || operator === '==') {
 			clearInput()
 		}
 		update()
@@ -97,14 +97,9 @@ export const bindFilter = (
 	input.addEventListener('keydown', (event) => {
 		if (event.key !== 'Enter') return
 		event.preventDefault()
-		if (!commitInput()) {
-			setEnabled(false)
-			onChange()
-			return
-		}
-		setEnabled(true)
+		setEnabled(commitInput())
 		onChange()
-		toggleButton.focus()
+		if (enabled) toggleButton.focus()
 	})
 
 	input.addEventListener('input', () => {
@@ -133,20 +128,23 @@ export const bindFilter = (
 			return enabled
 		},
 		matches(candidate) {
-			if (operator === '=') return pattern?.test(String(candidate)) ?? false
-			const numeric = typeof candidate === 'string' && !candidate.trim() ? Number.NaN : Number(candidate)
+			const raw = String(candidate).trim()
+			if (!raw) return false
+			if (operator === '==') return pattern?.test(raw) ?? false
+			const numeric = Number(raw)
 			if (value === null || !Number.isFinite(numeric)) return false
-			return operator === '>' ? numeric > value : numeric < value
+			switch (operator) {
+				case '>': return numeric > value
+				case '>=': return numeric >= value
+				case '<': return numeric < value
+				case '<=': return numeric <= value
+			}
 		},
-		reset() {
+		reset(column) {
+			available = column !== null
+			label = column ?? 'Filter'
 			operator = '>'
 			clearInput()
-			update()
-		},
-		setAvailable(nextAvailable, nextLabel = label) {
-			available = nextAvailable
-			label = nextLabel
-			if (!available) enabled = false
 			update()
 		},
 	}

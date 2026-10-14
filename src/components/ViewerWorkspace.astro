@@ -35,12 +35,10 @@ const isReinvent = mode === 'reinvent'
 				? '.csv,.tsv,text/csv,text/tab-separated-values,text/plain'
 				: '.smi,.smiles,.csv,.tsv,text/csv,text/tab-separated-values,text/plain'}
 		>
-			{!isReinvent && (
-				<Fragment slot="form-options">
-					<SetId />
-					<ColumnFilters />
-				</Fragment>
-			)}
+			<Fragment slot="form-options">
+				{!isReinvent && <SetId />}
+				<ColumnFilters />
+			</Fragment>
 		</SmilesForm>
 
 		<TopBar

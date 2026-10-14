@@ -36,7 +36,7 @@ const initializeViewer = () => {
 	const cardTemplate = document.querySelector<HTMLTemplateElement>('#card-template')!
 	const pillTemplate = document.querySelector<HTMLTemplateElement>('#pill-template')!
 	const displayPanel = document.querySelector<HTMLDivElement>('#display-panel')!
-	const columnFiltersPanel = document.querySelector<HTMLDivElement>('#column-filters')
+	const columnFiltersPanel = document.querySelector<HTMLDivElement>('#column-filters')!
 	const setIdPanel = document.querySelector<HTMLDivElement>('#set-id')
 	const setIdSelect = document.querySelector<HTMLSelectElement>('#set-id-column')
 	const viewToggle = document.querySelector<HTMLElement>('#view-toggle')
@@ -326,15 +326,12 @@ const initializeViewer = () => {
 	}
 
 	const recompute = () => {
-		activeOrder = computeOrder()
-			.filter(itemInStep)
+		const matchingOrder = computeOrder()
 			.filter((index) => columnFilters.matches(items[index]))
-		if (stepActive()) {
-			stepInput.value = String(currentStepIndex + 1)
-			setSummary(activeOrder.filter(hasValidSmilesState).length)
-		} else if (reinventMode) {
-			setSummary(activeOrder.filter(hasValidSmilesState).length)
-		} else setSummary(activeOrder.length)
+		activeOrder = matchingOrder.filter(itemInStep)
+		setTotals(matchingOrder.length)
+		if (stepActive()) stepInput.value = String(currentStepIndex + 1)
+		setSummary(reinventMode ? activeOrder.filter(hasValidSmilesState).length : activeOrder.length)
 		if (reinventMode && items.length > 0) renderSummary.hidden = false
 		renderGallery()
 	}
@@ -366,7 +363,7 @@ const initializeViewer = () => {
 
 	const setTotals = (rendered: number) => {
 		totalRendered.textContent = String(rendered)
-		renderTotal.hidden = rendered === 0
+		renderTotal.hidden = items.length === 0
 	}
 
 	stepRange.addEventListener('input', () => {
@@ -546,10 +543,6 @@ const initializeViewer = () => {
 			Object.keys(items[0]?.props ?? {}).find(
 				(column) => column.toLowerCase() === 'smiles_state',
 			) ?? null
-		setSummary(items.length)
-		setTotals(items.length)
-		renderSummary.hidden = !reinventMode
-
 		populatePanel(parsed.columns, true)
 		columnFilters.populate(withMolecularMassColumn(parsed.columns))
 		populateSetId(parsed.columns)

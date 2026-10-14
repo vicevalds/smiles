@@ -7,4 +7,4 @@ const { dataAttribute } = Astro.props
 const attributes = { [`data-${dataAttribute}`]: '' }
 ---
 
-<span {...attributes} class="inline-block min-w-[var(--count-width,0px)] text-right font-semibold tabular-nums text-black"><slot /></span>
+<span {...attributes} class="inline-block min-w-[calc(attr(data-digits_type(<number>),0)*1ch)] text-right font-semibold tabular-nums text-black"><slot /></span>
