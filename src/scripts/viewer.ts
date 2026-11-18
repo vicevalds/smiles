@@ -329,7 +329,7 @@ const initializeViewer = () => {
 		const matchingOrder = computeOrder()
 			.filter((index) => columnFilters.matches(items[index]))
 		activeOrder = matchingOrder.filter(itemInStep)
-		setTotals(matchingOrder.length)
+		setTotals(items.length)
 		if (stepActive()) stepInput.value = String(currentStepIndex + 1)
 		setSummary(reinventMode ? activeOrder.filter(hasValidSmilesState).length : activeOrder.length)
 		if (reinventMode && items.length > 0) renderSummary.hidden = false
@@ -358,7 +358,7 @@ const initializeViewer = () => {
 
 	const setSummary = (rendered: number) => {
 		summaryRendered.textContent = String(rendered)
-		renderSummary.hidden = rendered === 0
+		renderSummary.hidden = items.length === 0
 	}
 
 	const setTotals = (rendered: number) => {

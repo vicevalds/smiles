@@ -355,7 +355,7 @@ const initializeNNViewer = () => {
 		summaryRendered.textContent = String(activeNeighbors.length)
 		renderSummary.hidden = queryGroups.length === 0
 		const allNeighbors = queryGroups.flatMap((group) => group.neighbors)
-		totalRendered.textContent = String(countUniqueCompounds(allNeighbors.filter(columnFilters.matches)))
+		totalRendered.textContent = String(countUniqueCompounds(allNeighbors))
 		renderTotal.hidden = queryGroups.length === 0
 	}
 
